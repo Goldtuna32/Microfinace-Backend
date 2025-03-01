@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.MediaType;
 
@@ -46,12 +47,29 @@ public class CollateralController {
         return ResponseEntity.ok(collateralService.createCollateral(collateralDTO, frontPhoto, backPhoto));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<CollateralDTO> updateCollateral(@PathVariable Long id,
-            @RequestBody CollateralDTO collateralDTO) {
-        return collateralService.updateCollateral(id, collateralDTO)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<CollateralDTO> updateCollateral(
+            @PathVariable Long id,
+            @RequestParam("value") String value,
+            @RequestParam("description") String description,
+            @RequestParam("status") Integer status,
+            @RequestParam(value = "f_collateral_photo", required = false) MultipartFile frontPhoto,
+            @RequestParam(value = "b_collateral_photo", required = false) MultipartFile backPhoto
+    ) throws IOException {
+
+
+
+        // Build CollateralDTO
+        CollateralDTO collateralDTO = new CollateralDTO();
+        collateralDTO.setId(id);
+        collateralDTO.setValue(new BigDecimal(value)); // Parse string to BigDecimal
+        collateralDTO.setDescription(description);
+        collateralDTO.setStatus(status);
+
+
+        // Call service and return response
+        CollateralDTO updatedCollateral = collateralService.updateCollateral(id, collateralDTO, frontPhoto, backPhoto);
+        return ResponseEntity.ok(updatedCollateral);
     }
 
     @DeleteMapping("/{id}")

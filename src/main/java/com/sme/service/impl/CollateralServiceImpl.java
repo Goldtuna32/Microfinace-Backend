@@ -1,6 +1,7 @@
 package com.sme.service.impl;
 
 // Add this import
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -140,15 +141,70 @@ public class CollateralServiceImpl implements CollateralService {
         }
     }
 
-    @Transactional
     @Override
-    public Optional<CollateralDTO> updateCollateral(Long id, CollateralDTO collateralDTO) {
-        return collateralRepository.findById(id).map(existingCollateral -> {
-            modelMapper.map(collateralDTO, existingCollateral);
-            existingCollateral.setId(id); // ✅ Ensure ID remains the same
-            existingCollateral = collateralRepository.save(existingCollateral);
-            return modelMapper.map(existingCollateral, CollateralDTO.class);
+    @Transactional
+    public CollateralDTO updateCollateral(Long id, CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException {
+        // Fetch the existing entity
+        Collateral existingCollateral = collateralRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Collateral not found with ID: " + id));
+
+        // Preserve existing values
+        String existingFCollateralPhoto = existingCollateral.getF_collateral_photo();
+        String existingBCollateralPhoto = existingCollateral.getB_collateral_photo();
+
+        // Configure ModelMapper to skip fields that should not be updated
+        modelMapper.typeMap(CollateralDTO.class, Collateral.class).addMappings(mapper -> {
+            mapper.skip(Collateral::setId); // Skip ID
+            mapper.skip(Collateral::setCif); // Skip CIF relationship
+            mapper.skip(Collateral::setCollateralType); // Skip CollateralType relationship
         });
+
+        // Map DTO to entity (only updates value, description, status, etc., not relationships)
+        modelMapper.map(collateralDTO, existingCollateral);
+
+        // Set status explicitly (no need to set ID or relationships)
+        existingCollateral.setStatus(1); // Assuming 1 is active
+
+        // Handle front photo
+        if (frontPhoto != null && !frontPhoto.isEmpty()) {
+            deleteImage(existingCollateral.getF_collateral_photo());
+            String frontPhotoUrl = uploadImage(frontPhoto);
+            existingCollateral.setF_collateral_photo(frontPhotoUrl);
+        } else if (collateralDTO.getF_collateral_photo() != null && !collateralDTO.getF_collateral_photo().isEmpty()) {
+            existingCollateral.setF_collateral_photo(collateralDTO.getF_collateral_photo());
+        } else {
+            existingCollateral.setF_collateral_photo(existingFCollateralPhoto);
+        }
+
+        // Handle back photo
+        if (backPhoto != null && !backPhoto.isEmpty()) {
+            deleteImage(existingCollateral.getB_collateral_photo());
+            String backPhotoUrl = uploadImage(backPhoto);
+            existingCollateral.setB_collateral_photo(backPhotoUrl);
+        } else if (collateralDTO.getB_collateral_photo() != null && !collateralDTO.getB_collateral_photo().isEmpty()) {
+            existingCollateral.setB_collateral_photo(collateralDTO.getB_collateral_photo());
+        } else {
+            existingCollateral.setB_collateral_photo(existingBCollateralPhoto);
+        }
+
+        // Save the updated entity
+        Collateral updatedCollateral = collateralRepository.save(existingCollateral);
+        return modelMapper.map(updatedCollateral, CollateralDTO.class);
+    }
+
+    private void deleteImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return; // No old image, nothing to delete
+        }
+
+        try {
+            // Extract Public ID from Cloudinary URL
+            String publicId = imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf("."));
+
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());  // Delete from Cloudinary
+        } catch (Exception e) {
+            System.err.println("Failed to delete image: " + e.getMessage());
+        }
     }
 
     @Transactional

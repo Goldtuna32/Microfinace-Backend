@@ -15,7 +15,7 @@ public interface CollateralService {
     Optional<CollateralDTO> getCollateralById(Long id);
 
     CollateralDTO createCollateral(CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException;
-    Optional<CollateralDTO> updateCollateral(Long id, CollateralDTO collateralDTO);
+    CollateralDTO updateCollateral(Long id, CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException;
     boolean deleteCollateral(Long id);
 
     Page<CollateralDTO> getAllCollateralsPaginated(Pageable pageable);

@@ -23,9 +23,17 @@ public class SmeLoanRegistration {
     @Column(name = "interest_rate", nullable = false, precision = 15, scale = 2)
     private BigDecimal interestRate;
 
+    @Column(name = "late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal late_fee_rate;
+
+    @Column(name = "ninety_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal ninety_day_late_fee_rate;
+
+    @Column(name = "one_hundred_and_eighty_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal one_hundred_and_eighty_late_fee_rate;
+
     @Column(name = "grace_period", nullable = false)
     private Integer gracePeriod;
-
 
     @Column(name = "repayment_duration", nullable = false)
     private Long repaymentDuration;
@@ -40,9 +48,6 @@ public class SmeLoanRegistration {
     @Column(name = "status", nullable = false)
     private Integer status;
 
-    @Column(name = "due_date")
-    private LocalDateTime dueDate;
-
     @Column(name = "repayment_start_date")
     private LocalDateTime repaymentStartDate;
 
@@ -56,6 +61,3 @@ public class SmeLoanRegistration {
     @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL)
     private List<SmeLoanCollateral> smeLoanCollaterals; // Always initialized
 }
-
-
-

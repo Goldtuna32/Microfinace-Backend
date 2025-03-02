@@ -2,12 +2,14 @@ package com.sme.entity;
 
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.sql.Timestamp;
-
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 @Entity
+@Data
 @Table(name = "repayment_transaction")
 public class RepaymentTransaction {
     @Id
@@ -26,6 +28,9 @@ public class RepaymentTransaction {
     @Column(name = "paid_late_fee", nullable = false)
     private BigDecimal paidLateFee;
 
+    @Column(name = "late_fee_paid_date")
+    private LocalDateTime lateFeePaidDate;
+
     @Column(name = "paid_IOD", nullable = false)
     private BigDecimal paidIOD;
 
@@ -35,7 +40,6 @@ public class RepaymentTransaction {
     @StatusConverter
     @Column(name = "status", nullable = false)
     private Integer status;
-
 
     @ManyToOne
     @JoinColumn(name = "current_account_id", nullable = false)

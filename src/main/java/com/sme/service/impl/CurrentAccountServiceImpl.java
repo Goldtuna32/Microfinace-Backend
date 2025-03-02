@@ -75,6 +75,7 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
 
         CurrentAccount account = new CurrentAccount();
         account.setCif(cif);
+        account.setAccountNumber("CA-5F3D9A2B");
         account.setBalance(accountDTO.getBalance());
         account.setMinimumBalance(accountDTO.getMinimumBalance());
         account.setMaximumBalance(accountDTO.getMaximumBalance());
@@ -86,15 +87,16 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         return convertToDTO(savedAccount);
     }
 
-
     public boolean hasCurrentAccount(Long cifId) {
         return currentAccountRepository.existsByCifId(cifId);
     }
+
     // ✅ Delete a Current Account
     @Override
     public void deleteCurrentAccount(Long id) {
         currentAccountRepository.deleteById(id);
     }
+
     @Override
     public Page<CurrentAccountDTO> getAllCurrentAccountsPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());

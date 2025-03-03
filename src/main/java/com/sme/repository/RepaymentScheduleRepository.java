@@ -16,6 +16,10 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
     // Find all repayment schedules with due dates on the given date
     List<RepaymentSchedule> findByDueDate(LocalDate dueDate);
 
+    List<RepaymentSchedule> findSchedulesByGraceEndDate(LocalDate graceEndDate);
+
+    List<RepaymentSchedule> findOverdueSchedulesByGraceEndDate(LocalDate today);
+
     // Find all schedules that are due but not yet fully paid
     List<RepaymentSchedule> findByDueDateAndStatusNot(LocalDate dueDate, Integer status);
 
@@ -26,4 +30,12 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
     // Fetch overdue schedules (past due but unpaid)
     @Query("SELECT r FROM RepaymentSchedule r WHERE r.dueDate < :today AND r.status = 0")
     List<RepaymentSchedule> findOverdueSchedules(@Param("today") LocalDate today);
+
+    @Query("SELECT rs FROM RepaymentSchedule rs " +
+            "WHERE rs.dueDate <= :today " +
+            "AND (rs.status != 6) " +
+            "AND (rs.dueDate = :today " +
+            "OR (:today BETWEEN rs.dueDate AND rs.graceEndDate) " +
+            "OR :today > rs.graceEndDate)")
+    List<RepaymentSchedule> findSchedulesForProcessing(@Param("today") LocalDate today);
 }

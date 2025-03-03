@@ -31,6 +31,11 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
     }
 
     @Override
+    public List<CollateralType> getAllDeletedCollateralTypes() {
+        return repository.findByStatus(2);
+    }
+
+    @Override
     public CollateralType updateCollateralType(Long id, CollateralType collateralType) {
         if (repository.existsById(id)) {
             collateralType.setId(id);

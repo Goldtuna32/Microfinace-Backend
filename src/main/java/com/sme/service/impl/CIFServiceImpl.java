@@ -45,6 +45,13 @@ public class CIFServiceImpl implements CIFService {
     }
 
     @Override
+    public List<CIFDTO> getDeletedCIFS() {
+        return cifRepository.findByStatus(2).stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<CIFDTO> getCIFById(Long id) {
         return cifRepository.findById(id).map(cif -> {
             boolean hasCurrentAccount = currentAccountService.hasCurrentAccount(cif.getId());
@@ -161,16 +168,28 @@ public class CIFServiceImpl implements CIFService {
     }
 
 
+    @Transactional
     @Override
-    public void deleteCIF(Long id) {
-        Optional<CIF> cifOptional = cifRepository.findById(id);
-        if (cifOptional.isEmpty()) {
-            throw new RuntimeException("CIF not found with ID: " + id);
+    public boolean softDeleteCIF(Long id) {
+        if (cifRepository.existsById(id)) {
+            CIF cif = cifRepository.findById(id).get(); // Safe due to existsById check
+            cif.setStatus(2); // Set status to inactive
+            cifRepository.save(cif);
+            return true;
         }
+        return false;
+    }
 
-        CIF cif = cifOptional.get();
-        cif.setStatus(2);
-        cifRepository.save(cif);
+    @Transactional
+    @Override
+    public boolean restoreCIF(Long id) {
+        if (cifRepository.existsById(id)) {
+            CIF cif = cifRepository.findById(id).get(); // Safe due to existsById check
+            cif.setStatus(1); // Set status to active
+            cifRepository.save(cif);
+            return true;
+        }
+        return false;
     }
 
 }

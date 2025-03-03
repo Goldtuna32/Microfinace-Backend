@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/collateral-types")
+@RequestMapping("/api/collateral-types")
+@CrossOrigin("http://localhost:4200")
 public class CollateralTypeController {
 
     @Autowired
@@ -40,9 +41,21 @@ public class CollateralTypeController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping
+    @GetMapping("/active")
     public ResponseEntity<List<CollateralTypeDTO>> getAllActive() {
         List<CollateralTypeDTO> dtos = service.getAllActiveCollateralTypes().stream().map(entity -> {
+            CollateralTypeDTO dto = new CollateralTypeDTO();
+            dto.setId(entity.getId());
+            dto.setName(entity.getName());
+            dto.setStatus(entity.getStatus());
+            return dto;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/deleted")
+    public ResponseEntity<List<CollateralTypeDTO>> getAllDeleted() {
+        List<CollateralTypeDTO> dtos = service.getAllDeletedCollateralTypes().stream().map(entity -> {
             CollateralTypeDTO dto = new CollateralTypeDTO();
             dto.setId(entity.getId());
             dto.setName(entity.getName());

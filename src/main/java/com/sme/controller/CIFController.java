@@ -24,9 +24,15 @@ public class CIFController {
     @Autowired
     private CIFService cifService;
 
-    @GetMapping
+    @GetMapping("/active")
     public ResponseEntity<List<CIFDTO>> getAllCIFs() {
         List<CIFDTO> cifList = cifService.getAllCIFs();
+        return ResponseEntity.ok(cifList);
+    }
+
+    @GetMapping("/deleted")
+    public ResponseEntity<List<CIFDTO>> getDeletedCIFs() {
+        List<CIFDTO> cifList = cifService.getDeletedCIFS();
         return ResponseEntity.ok(cifList);
     }
 
@@ -112,10 +118,17 @@ public class CIFController {
 
 
 
-    // ✅ Delete CIF
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCIF(@PathVariable Long id) {
-        cifService.deleteCIF(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> softDeleteCIF(@PathVariable Long id) {
+        return cifService.softDeleteCIF(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreCIF(@PathVariable Long id) {
+        return cifService.restoreCIF(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

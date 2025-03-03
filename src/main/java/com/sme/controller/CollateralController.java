@@ -27,9 +27,14 @@ public class CollateralController {
 
     private final CollateralService collateralService;
 
-    @GetMapping
+    @GetMapping("/active")
     public ResponseEntity<List<CollateralDTO>> getAllCollaterals() {
         return ResponseEntity.ok(collateralService.getAllCollaterals());
+    }
+
+    @GetMapping("/deleted")
+    public ResponseEntity<List<CollateralDTO>> getDeletedCollaterals() {
+        return ResponseEntity.ok(collateralService.getDeletedCollaterals());
     }
 
     @GetMapping("/{id}")
@@ -73,8 +78,16 @@ public class CollateralController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCollateral(@PathVariable Long id) {
-        return collateralService.deleteCollateral(id) ? ResponseEntity.noContent().build()
+    public ResponseEntity<Void> softDeleteCollateral(@PathVariable Long id) {
+        return collateralService.softDeleteCollateral(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreCollateral(@PathVariable Long id) {
+        return collateralService.restoreCollateral(id)
+                ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();
     }
 

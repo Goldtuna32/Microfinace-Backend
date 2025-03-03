@@ -11,12 +11,14 @@ import java.util.Optional;
 public interface CollateralService {
 
     List<CollateralDTO> getAllCollaterals();
+    List<CollateralDTO> getDeletedCollaterals();
 
     Optional<CollateralDTO> getCollateralById(Long id);
 
     CollateralDTO createCollateral(CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException;
     CollateralDTO updateCollateral(Long id, CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException;
-    boolean deleteCollateral(Long id);
+    boolean softDeleteCollateral(Long id);  // Renamed to clarify it’s a soft delete
+    boolean restoreCollateral(Long id);
 
     Page<CollateralDTO> getAllCollateralsPaginated(Pageable pageable);
 

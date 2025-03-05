@@ -96,56 +96,72 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             BigDecimal balance = account.getBalance();
             BigDecimal holdAmount = account.getHoldAmount() != null ? account.getHoldAmount() : BigDecimal.ZERO;
             
-            // If there's IOD, calculate and process late fee first
+            // Get all overdue schedules for this loan ordered by due date
             if (schedule.getInterestOverDue().compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal requiredLateFee = calculateLateFee(schedule);
-                BigDecimal requiredIOD = schedule.getInterestOverDue();
+                List<RepaymentSchedule> overdueSchedules = repaymentScheduleRepository
+                    .findOverdueSchedulesByLoanOrderByDueDate(schedule.getSmeLoan().getId());
+                
                 BigDecimal totalAvailable = balance.add(holdAmount);
-
-                System.out.println("Processing IOD payment:");
-                System.out.println("Required Late Fee: " + requiredLateFee);
-                System.out.println("Required IOD: " + requiredIOD);
+                BigDecimal totalLateFee = BigDecimal.ZERO;
+                
+                // Calculate total late fees for all overdue terms
+                for (RepaymentSchedule overdueSchedule : overdueSchedules) {
+                    BigDecimal lateFee = calculateLateFee(overdueSchedule);
+                    totalLateFee = totalLateFee.add(lateFee);
+                    
+                    System.out.println("Term " + overdueSchedule.getId() + " Late Fee: " + lateFee);
+                }
+                
+                System.out.println("Total Late Fee Required: " + totalLateFee);
                 System.out.println("Total Available: " + totalAvailable);
 
-                // Check if we have enough for late fee (including hold amount)
-                if (totalAvailable.compareTo(requiredLateFee) >= 0) {
-                    // Take late fee
-                    BigDecimal paidLateFee = requiredLateFee;
-                    account.setHoldAmount(BigDecimal.ZERO); // Clear hold amount
-                    balance = totalAvailable.subtract(paidLateFee);
-                    
-                    // Try to pay IOD with remaining balance
-                    BigDecimal paidIOD = BigDecimal.ZERO;
-                    if (balance.compareTo(BigDecimal.ZERO) > 0) {
-                        if (balance.compareTo(requiredIOD) >= 0) {
-                            paidIOD = requiredIOD;
-                            balance = balance.subtract(paidIOD);
-                            schedule.setInterestOverDue(BigDecimal.ZERO);
-                        } else {
-                            paidIOD = balance;
-                            balance = BigDecimal.ZERO;
-                            schedule.setInterestOverDue(requiredIOD.subtract(paidIOD));
+                // Process late fees first
+                if (totalAvailable.compareTo(totalLateFee) >= 0) {
+                    // Enough for all late fees, process IOD payments
+                    balance = totalAvailable.subtract(totalLateFee);
+                    account.setHoldAmount(BigDecimal.ZERO);
+                    // In the IOD processing section, modify the transaction creation:
+                    // Process IOD payments in order
+                    for (RepaymentSchedule overdueSchedule : overdueSchedules) {
+                        BigDecimal lateFee = calculateLateFee(overdueSchedule);
+                        BigDecimal requiredIOD = overdueSchedule.getInterestOverDue();
+                        BigDecimal paidIOD = BigDecimal.ZERO;
+                        
+                        if (balance.compareTo(BigDecimal.ZERO) > 0) {
+                            if (balance.compareTo(requiredIOD) >= 0) {
+                                paidIOD = requiredIOD;
+                                balance = balance.subtract(paidIOD);
+                                overdueSchedule.setInterestOverDue(BigDecimal.ZERO);
+                            } else {
+                                paidIOD = balance;
+                                balance = BigDecimal.ZERO;
+                                overdueSchedule.setInterestOverDue(requiredIOD.subtract(paidIOD));
+                            }
+                            
+                            // Only create transaction if there's actual payment
+                            if (lateFee.compareTo(BigDecimal.ZERO) > 0 || paidIOD.compareTo(BigDecimal.ZERO) > 0) {
+                                RepaymentTransaction transaction = new RepaymentTransaction();
+                                transaction.setPaymentDate(Timestamp.valueOf(LocalDateTime.now()));
+                                transaction.setPaidLateFee(lateFee);
+                                transaction.setPaidIOD(paidIOD);
+                                transaction.setLateFeePaidDate(LocalDateTime.now());
+                                transaction.setPaidPrincipal(BigDecimal.ZERO);
+                                transaction.setPaidInterest(BigDecimal.ZERO);
+                                transaction.setRemainingPrincipal(overdueSchedule.getRemainingPrincipal());
+                                transaction.setCurrentAccount(account);
+                                transaction.setRepaymentSchedule(overdueSchedule);
+                                transaction.setStatus(1);
+                                repaymentTransactionRepository.save(transaction);
+                            }
+                            
+                            repaymentScheduleRepository.save(overdueSchedule);
                         }
                     }
-
-                    // Create transaction for payments
-                    RepaymentTransaction transaction = new RepaymentTransaction();
-                    transaction.setPaymentDate(Timestamp.valueOf(LocalDateTime.now()));
-                    transaction.setPaidLateFee(paidLateFee);
-                    transaction.setPaidIOD(paidIOD);
-                    transaction.setLateFeePaidDate(LocalDateTime.now());
-                    transaction.setPaidPrincipal(BigDecimal.ZERO);
-                    transaction.setPaidInterest(BigDecimal.ZERO);
-                    transaction.setRemainingPrincipal(schedule.getRemainingPrincipal());
-                    transaction.setCurrentAccount(account);
-                    transaction.setRepaymentSchedule(schedule);
-                    transaction.setStatus(1);
-                    repaymentTransactionRepository.save(transaction);
                 } else {
-                    // Not enough for late fee, hold the amount
+                    // Not enough for late fees, hold the amount
                     account.setHoldAmount(totalAvailable);
                     balance = BigDecimal.ZERO;
-                    System.out.println("Holding amount: " + totalAvailable + " for late fee");
+                    System.out.println("Holding amount: " + totalAvailable + " for late fees");
                 }
             }
 
@@ -272,20 +288,36 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         LocalDate today = LocalDate.now();
         LocalDate dueDate = schedule.getDueDate();
 
-        long lateDays = ChronoUnit.DAYS.between(dueDate, today);
+        // Get the latest transaction with late fee payment for this schedule
+        Optional<RepaymentTransaction> lastLateFeePayment = repaymentTransactionRepository
+            .findTopByRepaymentScheduleAndLateFeePaidDateIsNotNullOrderByLateFeePaidDateDesc(schedule);
+
+        // Use late_fee_paid_date if exists, otherwise use due date
+        LocalDate startDate = lastLateFeePayment
+            .map(transaction -> transaction.getLateFeePaidDate().toLocalDate())
+            .orElse(dueDate);
+
+        // Debug information
+        System.out.println("Schedule " + schedule.getId() + ":");
+        System.out.println("Due Date: " + dueDate);
+        System.out.println("Last Late Fee Paid Date: " + (lastLateFeePayment.isPresent() ? 
+            lastLateFeePayment.get().getLateFeePaidDate() : "None"));
+        System.out.println("Counting late days from: " + startDate);
+        System.out.println("Today: " + today);
+
+        // Calculate late days from the appropriate start date
+        long lateDays = ChronoUnit.DAYS.between(startDate, today);
 
         if (lateDays > 0) {
             BigDecimal interestOverDue = schedule.getInterestOverDue();
             BigDecimal ratePercentage = schedule.getSmeLoan().getLate_fee_rate();
             
             if (ratePercentage == null) {
-                ratePercentage = new BigDecimal("5.00"); // 5% default rate
+                ratePercentage = new BigDecimal("4.00"); // 4% default rate
             }
 
-            // Convert percentage to decimal (e.g., 4% -> 0.04)
             BigDecimal rate = ratePercentage.divide(new BigDecimal("100"));
 
-            System.out.println("Calculating late fee:");
             System.out.println("Late days: " + lateDays);
             System.out.println("IOD amount: " + interestOverDue);
             System.out.println("Rate (%): " + ratePercentage);

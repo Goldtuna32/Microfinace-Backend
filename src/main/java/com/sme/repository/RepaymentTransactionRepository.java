@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RepaymentTransactionRepository extends JpaRepository<RepaymentTransaction, Long> {
@@ -23,4 +24,6 @@ public interface RepaymentTransactionRepository extends JpaRepository<RepaymentT
 
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.dueDate = :dueDate AND rs.status = 1")
     List<RepaymentSchedule> findDueSchedules(LocalDate dueDate);
+    Optional<RepaymentTransaction> findTopByRepaymentScheduleAndLateFeePaidDateIsNotNullOrderByLateFeePaidDateDesc(
+            RepaymentSchedule schedule);
 }

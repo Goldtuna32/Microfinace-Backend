@@ -19,6 +19,14 @@
     <field name="interestAmount" class="java.math.BigDecimal"/>
     <field name="remainingPrincipal" class="java.math.BigDecimal"/>
 
+    <!-- Adding calculated fields for installmentNumber and totalPayment -->
+    <variable name="installmentNumber" class="java.lang.Integer" resetType="Report" incrementType="Report">
+        <variableExpression><![CDATA[$V{REPORT_COUNT}]]></variableExpression>
+    </variable>
+    <variable name="totalPayment" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{principalAmount}.add($F{interestAmount})]]></variableExpression>
+    </variable>
+
     <title>
         <band height="50">
             <staticText>
@@ -31,10 +39,66 @@
         </band>
     </title>
 
+    <columnHeader>
+        <band height="20">
+            <staticText>
+                <reportElement x="0" y="0" width="92" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Installment #]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="92" y="0" width="92" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Due Date]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="184" y="0" width="92" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Principal]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="276" y="0" width="92" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Interest]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="368" y="0" width="92" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Total Payment]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="460" y="0" width="95" height="20" forecolor="black" backcolor="gray"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Remaining Principal]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
     <detail>
         <band height="20" splitType="Stretch">
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="0" width="100" height="20" forecolor="black" backcolor="white">
+                <reportElement x="0" y="0" width="92" height="20" forecolor="black" backcolor="white">
+                    <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
+                    <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
+                    <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>
+                </reportElement>
+                <textFieldExpression><![CDATA[$V{installmentNumber}]]></textFieldExpression>
+            </textField>
+
+            <textField textAdjust="StretchHeight">
+                <reportElement x="92" y="0" width="92" height="20" forecolor="black" backcolor="white">
                     <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
                     <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
                     <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>
@@ -43,7 +107,7 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="100" y="0" width="100" height="20" forecolor="black" backcolor="white">
+                <reportElement x="184" y="0" width="92" height="20" forecolor="black" backcolor="white">
                     <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
                     <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
                     <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>
@@ -52,7 +116,7 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="200" y="0" width="100" height="20" forecolor="black" backcolor="white">
+                <reportElement x="276" y="0" width="92" height="20" forecolor="black" backcolor="white">
                     <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
                     <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
                     <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>
@@ -61,7 +125,16 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="400" y="0" width="100" height="20" forecolor="black" backcolor="white">
+                <reportElement x="368" y="0" width="92" height="20" forecolor="black" backcolor="white">
+                    <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
+                    <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
+                    <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>
+                </reportElement>
+                <textFieldExpression><![CDATA[$V{totalPayment}]]></textFieldExpression>
+            </textField>
+
+            <textField textAdjust="StretchHeight">
+                <reportElement x="460" y="0" width="95" height="20" forecolor="black" backcolor="white">
                     <property name="net.sf.jasperreports.export.xls.wrap.text" value="true"/>
                     <property name="net.sf.jasperreports.export.xls.border.color" value="black"/>
                     <property name="net.sf.jasperreports.export.xls.border.style" value="thin"/>

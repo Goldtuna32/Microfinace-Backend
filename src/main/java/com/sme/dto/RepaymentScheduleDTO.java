@@ -13,6 +13,7 @@ public class RepaymentScheduleDTO {
     private LocalDate graceEndDate;
     private BigDecimal interestAmount;
     private BigDecimal principalAmount;
+    private BigDecimal principal_paid;
     private BigDecimal lateFee;
     private BigDecimal interestOverDue;
     @StatusConverter

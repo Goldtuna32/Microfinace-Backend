@@ -71,7 +71,6 @@ public class HolidayServiceImpl implements HolidayService {
         while (!startDate.isAfter(endDate)) {
             DayOfWeek dayOfWeek = startDate.getDayOfWeek();
 
-
             if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
                 for (Branch branch : branches) {
                     Holiday holiday = new Holiday();
@@ -91,5 +90,11 @@ public class HolidayServiceImpl implements HolidayService {
     @Transactional
     public List<Holiday> getHolidaysByBranch(Long branchId) {
         return holidayRepository.findByBranchId(branchId);
+    }
+
+    @Override
+    public boolean isHoliday(LocalDate date) {
+        List<Holiday> holidays = holidayRepository.findByHolidayDate(java.sql.Date.valueOf(date));
+        return !holidays.isEmpty();
     }
 }

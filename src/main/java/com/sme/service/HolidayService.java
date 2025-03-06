@@ -18,9 +18,12 @@ import java.util.Map;
 
 public interface HolidayService {
 
-     void importMyanmarHolidays(int year) throws Exception;
+    void importMyanmarHolidays(int year) throws Exception;
 
-     void generateWeekendsForYear(int year);
+    void generateWeekendsForYear(int year);
 
     List<Holiday> getHolidaysByBranch(Long branchId);
+
+    boolean isHoliday(LocalDate date);
+
 }

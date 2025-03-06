@@ -29,6 +29,7 @@ public class RepaymentSchedule {
     @Column(name = "principal_amount", nullable = false)
     private BigDecimal principalAmount = BigDecimal.ZERO;
 
+
     @Column(name = "late_fee", nullable = false)
     private BigDecimal lateFee = BigDecimal.ZERO;
 
@@ -48,8 +49,6 @@ public class RepaymentSchedule {
     @Column(name = "paid_late")
     private Boolean paidLate = false;
 
-    @Column(name = "late_fee_paid_date")
-    private LocalDateTime lateFeePaidDate;
 
     @ManyToOne
     @JoinColumn(name = "sme_loan_id", nullable = false)

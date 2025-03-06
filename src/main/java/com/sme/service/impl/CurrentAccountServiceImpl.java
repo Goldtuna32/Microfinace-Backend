@@ -86,6 +86,18 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         return convertToDTO(savedAccount);
     }
 
+    @Override
+    public List<CurrentAccountDTO> getCurrentAccountsByCifId(Long cifId) {
+        List<CurrentAccount> accounts = currentAccountRepository.findByCifId(cifId);
+        return accounts.stream()
+                .map(account -> new CurrentAccountDTO(
+                        account.getId(),         // Long
+                        account.getAccountNumber(), // String
+                        account.getBalance().longValue()     // BigDecimal
+                ))
+                .collect(Collectors.toList());
+    }
+
 
     public boolean hasCurrentAccount(Long cifId) {
         return currentAccountRepository.existsByCifId(cifId);

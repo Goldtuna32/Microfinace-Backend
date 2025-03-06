@@ -260,4 +260,11 @@ public class CollateralServiceImpl implements CollateralService {
                 .map(collateral -> modelMapper.map(collateral, CollateralDTO.class));
     }
 
+    @Override
+    public List<CollateralDTO> getCollateralsByCifId(Long cifId) {
+        return collateralRepository.findByCifIdAndStatus(cifId, 1).stream() // Fetch active collaterals only
+                .map(collateral -> modelMapper.map(collateral, CollateralDTO.class))
+                .collect(Collectors.toList());
+    }
+
 }

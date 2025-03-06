@@ -22,4 +22,6 @@ public interface CollateralService {
 
     Page<CollateralDTO> getAllCollateralsPaginated(Pageable pageable);
 
+    List<CollateralDTO> getCollateralsByCifId(Long cifId);
+
 }

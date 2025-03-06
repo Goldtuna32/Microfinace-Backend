@@ -20,4 +20,6 @@ public interface CollateralRepository extends JpaRepository<Collateral, Long> {
 
     Page<Collateral> findAll(Pageable pageable);
 
+    List<Collateral> findByCifIdAndStatus(Long cifId, Integer status);
+
 }

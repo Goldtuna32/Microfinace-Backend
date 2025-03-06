@@ -3,6 +3,7 @@ package com.sme.dto;
 import com.sme.annotation.StatusConverter;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,5 +22,17 @@ public class SmeLoanRegistrationDTO {
     private LocalDateTime dueDate;
     private LocalDateTime repaymentStartDate;
     private Long currentAccountId;
-    private List<Long> collateralIds;
+    private BigDecimal totalCollateralAmount;
+    private CIFDTO cif;
+    private String accountNumber;
+    private List<SmeLoanCollateralDTO> collaterals;
+
+    @Data
+    public static class CIFDTO {
+        private Long id;
+        private String name;
+        private String serialNumber;
+        private String nrcNumber;
+        private String email;
+    }
 }

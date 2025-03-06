@@ -1,5 +1,6 @@
 package com.sme.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -46,6 +47,9 @@ public class SmeLoanRegistration {
     @Column(name = "repayment_start_date")
     private LocalDateTime repaymentStartDate;
 
+    @Column(name = "current_account_id", insertable = false, updatable = false) // Managed by the relationship
+    private Long currentAccountId;
+
     @ManyToOne
     @JoinColumn(name = "current_account_id", nullable = false)
     private CurrentAccount currentAccount;
@@ -53,8 +57,9 @@ public class SmeLoanRegistration {
     @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL)
     private List<RepaymentSchedule> repaymentSchedules;
 
-    @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL)
-    private List<SmeLoanCollateral> smeLoanCollaterals; // Always initialized
+    @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<SmeLoanCollateral> collaterals; // Always initialized
 }
 
 

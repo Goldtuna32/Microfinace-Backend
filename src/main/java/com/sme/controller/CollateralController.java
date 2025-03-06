@@ -1,8 +1,12 @@
 package com.sme.controller;
 
 import com.sme.dto.CollateralDTO;
+import com.sme.dto.SmeLoanCollateralDTO;
+import com.sme.entity.SmeLoanCollateral;
+import com.sme.repository.SmeLoanCollateralRepository;
 import com.sme.service.CollateralService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.MediaType;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -24,6 +30,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @CrossOrigin(origins = "http://localhost:4200", allowedHeaders = "*", methods = { RequestMethod.GET, RequestMethod.POST,
         RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS }, allowCredentials = "true")
 public class CollateralController {
+
+    @Autowired
+    private SmeLoanCollateralRepository smeLoanCollateralRepository;
 
     private final CollateralService collateralService;
 
@@ -101,5 +110,26 @@ public class CollateralController {
         Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(collateralService.getAllCollateralsPaginated(pageable));
+    }
+
+    @GetMapping("/cif/{cifId}")
+    public ResponseEntity<List<CollateralDTO>> getCollateralsByCifId(@PathVariable Long cifId) {
+        List<CollateralDTO> collaterals = collateralService.getCollateralsByCifId(cifId);
+        return ResponseEntity.ok(collaterals);
+    }
+
+    @GetMapping("/loan/{loanId}")
+    public ResponseEntity<List<SmeLoanCollateralDTO>> getCollateralsByLoanId(@PathVariable Long loanId) {
+        List<SmeLoanCollateral> collaterals = smeLoanCollateralRepository.findBySmeLoanId(loanId);
+        List<SmeLoanCollateralDTO> dtos = collaterals.stream()
+                .map(coll -> {
+                    SmeLoanCollateralDTO dto = new SmeLoanCollateralDTO();
+                    dto.setCollateralId(coll.getCollateral().getId());
+                    dto.setCollateralAmount(coll.getCollateralAmount());
+                    dto.setDescription(coll.getCollateral().getDescription());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 }

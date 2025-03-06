@@ -9,7 +9,7 @@ import java.util.List;
 
 @Repository
 public interface SmeLoanCollateralRepository extends JpaRepository<SmeLoanCollateral, Long> {
-    List<SmeLoanCollateral> findBySmeLoanId(Long loanId);
+    List<SmeLoanCollateral> findBySmeLoanId(Long smeLoanId);
     List<SmeLoanCollateral> findByCollateralId(Long collateralId);
     void deleteBySmeLoan(SmeLoanRegistration smeLoan);
 

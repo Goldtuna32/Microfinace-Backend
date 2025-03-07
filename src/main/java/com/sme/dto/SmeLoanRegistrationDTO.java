@@ -13,6 +13,9 @@ public class SmeLoanRegistrationDTO {
     private Long id;
     private BigDecimal loanAmount;
     private BigDecimal interestRate;
+    private BigDecimal late_fee_rate;
+    private BigDecimal ninety_day_late_fee_rate;
+    private BigDecimal one_hundred_and_eighty_day_late_fee_rate;
     private Integer gracePeriod;
     private Long repaymentDuration;
     private BigDecimal documentFee;

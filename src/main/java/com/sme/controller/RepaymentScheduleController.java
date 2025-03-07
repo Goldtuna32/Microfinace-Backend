@@ -16,7 +16,7 @@ public class RepaymentScheduleController {
     private RepaymentScheduleService repaymentScheduleService;
 
     @PostMapping("/generate/{loanId}")
-    public ResponseEntity<String> generateSchedule(@PathVariable Long loanId) {
+    public ResponseEntity<String> generateSchedule(@PathVariable("loanId") Long loanId) {
         repaymentScheduleService.generateRepaymentSchedule(loanId);
         return ResponseEntity.ok("Repayment schedule generated for loan ID: " + loanId);
     }

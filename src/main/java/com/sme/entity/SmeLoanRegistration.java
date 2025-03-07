@@ -36,6 +36,9 @@ public class SmeLoanRegistration {
     @Column(name = "grace_period", nullable = false)
     private Integer gracePeriod;
 
+    @Column(name = "due_date")
+    private LocalDateTime dueDate;
+
     @Column(name = "repayment_duration", nullable = false)
     private Long repaymentDuration;
 

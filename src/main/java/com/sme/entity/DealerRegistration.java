@@ -1,5 +1,6 @@
 package com.sme.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -31,13 +32,14 @@ public class DealerRegistration {
 
 
 
-    @Column(name = "address_id", nullable = false)
-    private int addressId;
+    @OneToOne
+    private Address addressId;
 
-    @Column(name = "current_account_id", nullable = false)
-    private int currentAccountId;
+    @OneToOne
+    private CurrentAccount currentAccountId;
 
     @OneToMany(mappedBy = "dealerRegistration", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<HpProduct> hpProducts;
 
 

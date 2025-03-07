@@ -1,5 +1,7 @@
 package com.sme.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -31,7 +33,9 @@ public class HpProduct {
 
  
     @ManyToOne
+    @JsonBackReference
     @JoinColumn(name = "dealer_registration_id", nullable = false)
+    @JsonIgnore
     private DealerRegistration dealerRegistration; // ✅ Corrected mapping
 
     @Column(name = "hp_registration_id", nullable = false)

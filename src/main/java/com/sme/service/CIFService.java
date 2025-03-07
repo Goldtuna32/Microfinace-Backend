@@ -1,6 +1,8 @@
 package com.sme.service;
 
 import com.sme.dto.CIFDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -10,8 +12,7 @@ import java.util.Optional;
 public interface CIFService {
 
     List<CIFDTO> getAllCIFs();
-
-    List<CIFDTO> getDeletedCIFS();
+    List<CIFDTO> getDeletedCIFs();
 
     Optional<CIFDTO> getCIFById(Long id);
 

@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface BranchService {
 
-    String generateBranchCode(String region, String township);
+    String generateBranchCode(String region);
 
     String getRegionCode(String region);
 

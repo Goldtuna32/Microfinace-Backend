@@ -7,15 +7,13 @@ import com.sme.repository.SmeLoanCollateralRepository;
 import com.sme.service.CollateralService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,14 +35,71 @@ public class CollateralController {
     private final CollateralService collateralService;
 
     @GetMapping("/active")
-    public ResponseEntity<List<CollateralDTO>> getAllCollaterals() {
-        return ResponseEntity.ok(collateralService.getAllCollaterals());
+    public ResponseEntity<Page<CollateralDTO>> getAllCollaterals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        List<CollateralDTO> allCollaterals = collateralService.getAllCollaterals();
+
+        Comparator<CollateralDTO> comparator;
+        switch (sortBy.toLowerCase()) {
+            case "name":
+                comparator = Comparator.comparing(CollateralDTO::getDescription);
+                break;
+            default:
+                comparator = Comparator.comparing(CollateralDTO::getId);
+        }
+        if (direction.equalsIgnoreCase("desc")) {
+            comparator = comparator.reversed();
+        }
+        List<CollateralDTO> sortedCollaterals = allCollaterals.stream()
+                .sorted(comparator)
+                .collect(Collectors.toList());
+
+        Pageable pageable = PageRequest.of(page, size);
+        int start = Math.min((int) pageable.getOffset(), sortedCollaterals.size());
+        int end = Math.min(start + pageable.getPageSize(), sortedCollaterals.size());
+        List<CollateralDTO> paginatedCollaterals = sortedCollaterals.subList(start, end);
+
+        Page<CollateralDTO> pageResult = new PageImpl<>(paginatedCollaterals, pageable, sortedCollaterals.size());
+        return ResponseEntity.ok(pageResult);
     }
 
     @GetMapping("/deleted")
-    public ResponseEntity<List<CollateralDTO>> getDeletedCollaterals() {
-        return ResponseEntity.ok(collateralService.getDeletedCollaterals());
+    public ResponseEntity<Page<CollateralDTO>> getDeletedCollaterals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+        List<CollateralDTO> allCollaterals = collateralService.getDeletedCollaterals();
+
+
+        Comparator<CollateralDTO> comparator;
+        switch (sortBy.toLowerCase()) {
+            case "name":
+                comparator = Comparator.comparing(CollateralDTO::getDescription);
+                break;
+            default:
+                comparator = Comparator.comparing(CollateralDTO::getId);
+        }
+        if (direction.equalsIgnoreCase("desc")) {
+            comparator = comparator.reversed();
+        }
+        List<CollateralDTO> sortedCollaterals = allCollaterals.stream()
+                .sorted(comparator)
+                .collect(Collectors.toList());
+
+        Pageable pageable = PageRequest.of(page, size);
+        int start = Math.min((int) pageable.getOffset(), sortedCollaterals.size());
+        int end = Math.min(start + pageable.getPageSize(), sortedCollaterals.size());
+        List<CollateralDTO> paginatedCollaterals = sortedCollaterals.subList(start, end);
+
+        Page<CollateralDTO> pageResult = new PageImpl<>(paginatedCollaterals, pageable, sortedCollaterals.size());
+        return ResponseEntity.ok(pageResult);
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<CollateralDTO> getCollateralById(@PathVariable Long id) {

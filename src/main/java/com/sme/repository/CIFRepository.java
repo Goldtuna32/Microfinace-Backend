@@ -15,4 +15,8 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
     String findLastSerialNumberByBranch(@Param("branchId") Long branchId);
 
     List<CIF> findByStatus(Integer status);
+
+    @Query("SELECT c.serialNumber FROM CIF c WHERE c.branch.branchCode = :branchCode ORDER BY c.serialNumber DESC LIMIT 1")
+    String findLastCifCodeByBranchCode(@Param("branchCode") String branchCode);
+
 }

@@ -11,6 +11,8 @@ import com.sme.service.CIFService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,18 +40,23 @@ public class CIFServiceImpl implements CIFService {
     private final Cloudinary cloudinary;
 
     @Override
+    @Transactional
     public List<CIFDTO> getAllCIFs() {
-        return cifRepository.findByStatus(1).stream()
+        List<CIF> cifs = cifRepository.findByStatus(1); // Status 1 for active
+        return cifs.stream()
                 .map(cif -> modelMapper.map(cif, CIFDTO.class))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<CIFDTO> getDeletedCIFS() {
-        return cifRepository.findByStatus(2).stream()
+    @Transactional
+    public List<CIFDTO> getDeletedCIFs() {
+        List<CIF> cifs = cifRepository.findByStatus(2); // Status 2 for deleted
+        return cifs.stream()
                 .map(cif -> modelMapper.map(cif, CIFDTO.class))
                 .collect(Collectors.toList());
     }
+
 
     @Override
     public Optional<CIFDTO> getCIFById(Long id) {
@@ -84,25 +91,33 @@ public class CIFServiceImpl implements CIFService {
         cif.setBranch(branch);
         cif.setStatus(1);
 
-        String serialNumber = generateSerialNumber(branch);
+        String serialNumber = generateSerialNumber(branch.getBranchCode());
         cif.setSerialNumber(serialNumber);
 
         CIF savedCIF = cifRepository.save(cif);
         return modelMapper.map(savedCIF, CIFDTO.class);
     }
 
-    // New method to generate the serial number
-    private String generateSerialNumber(Branch branch) {
-        String branchCode =  branch.getBranchCode();
 
-        String uuidPart = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 6);
+    @Transactional
+    public String generateSerialNumber(String branchCode) {
+        String lastCifCode = cifRepository.findLastCifCodeByBranchCode(branchCode);
+         if (lastCifCode == null || lastCifCode.isEmpty()) {
+            return "CIF-" + branchCode + "-0001";
+        }
 
-        // Combine into final serial number
-        return "CIF-" + branchCode + "-" + uuidPart;
+        try {
+            int prefixLength = "CIF-".length() + branchCode.length() + 1;
+            int lastNumber = Integer.parseInt(lastCifCode.substring(prefixLength));
+
+            int newNumber = lastNumber + 1;
+            return "CIF-" + branchCode + "-" + String.format("%04d", newNumber);
+        } catch (NumberFormatException e) {
+            System.err.println("Error parsing CIF code: " + lastCifCode);
+            // Fallback to "0001" in case of parsing error
+            return "CIF-" + branchCode + "-0001";
+        }
     }
-
-
-
     private String uploadImage(MultipartFile file) throws IOException {
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         return uploadResult.get("secure_url").toString();

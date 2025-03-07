@@ -1,6 +1,8 @@
 package com.sme.controller;
 
 import com.sme.dto.CurrentAccountDTO;
+import com.sme.entity.CurrentAccount;
+import com.sme.repository.CurrentAccountRepository;
 import com.sme.service.CurrentAccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/current-accounts")
@@ -17,6 +20,9 @@ public class CurrentAccountController {
 
     @Autowired
     private CurrentAccountService currentAccountService;
+
+    @Autowired
+    private CurrentAccountRepository currentAccountRepository;
 
     // ✅ Get all Current Accounts
     @GetMapping
@@ -58,5 +64,23 @@ public class CurrentAccountController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(currentAccountService.getAllCurrentAccountsPaginated(page, size));
+    }
+
+    @GetMapping("/by-cif/{cifId}")
+    public List<CurrentAccountDTO> getCurrentAccountsByCifId(@PathVariable Long cifId) {
+        return currentAccountService.getCurrentAccountsByCifId(cifId);
+    }
+
+    @GetMapping("/serial/{serialNumber}")
+    public ResponseEntity<List<CurrentAccountDTO>> getCurrentAccountsByCifSerialNumber(@PathVariable String serialNumber) {
+        List<CurrentAccount> accounts = currentAccountRepository.findByCifSerialNumber(serialNumber);
+        List<CurrentAccountDTO> dtos = accounts.stream()
+                .map(account -> new CurrentAccountDTO(
+                        account.getId(),
+                        account.getAccountNumber(),
+                        account.getCif() != null ? account.getCif().getId() : null
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 }

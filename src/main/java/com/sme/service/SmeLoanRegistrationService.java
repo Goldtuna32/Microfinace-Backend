@@ -1,5 +1,6 @@
 package com.sme.service;
 
+import com.sme.dto.LoanRegistrationRequest;
 import com.sme.dto.SmeLoanRegistrationDTO;
 import com.sme.entity.Collateral;
 import com.sme.entity.SmeLoanCollateral;
@@ -20,13 +21,17 @@ import java.util.stream.Collectors;
 
 public interface SmeLoanRegistrationService {
 
-    List<SmeLoanRegistrationDTO> getAllLoans();
-
     SmeLoanRegistrationDTO getLoanById(Long id);
 
-    SmeLoanRegistrationDTO createLoan(SmeLoanRegistrationDTO dto);
+    SmeLoanRegistrationDTO registerLoan(LoanRegistrationRequest request);
 
-    SmeLoanRegistration registerLoan(SmeLoanRegistration loan, List<SmeLoanCollateral> loanCollaterals);
+    SmeLoanRegistrationDTO updateLoan(Long id, SmeLoanRegistrationDTO dto);
+
+    List<SmeLoanRegistrationDTO> getApprovedLoans();
+
+    List<SmeLoanRegistrationDTO> getPendingLoans();
+
+    SmeLoanRegistrationDTO approveLoan(Long id);
 
 
 }

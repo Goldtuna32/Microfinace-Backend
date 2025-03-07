@@ -11,11 +11,14 @@ public interface CIFService {
 
     List<CIFDTO> getAllCIFs();
 
+    List<CIFDTO> getDeletedCIFS();
+
     Optional<CIFDTO> getCIFById(Long id);
 
     CIFDTO createCIF(CIFDTO cifDTO, MultipartFile frontNrc, MultipartFile backNrc) throws IOException;
 
     CIFDTO updateCIF(Long id, CIFDTO cifDTO,MultipartFile frontNrc, MultipartFile backNrc) throws IOException;
 
-    void deleteCIF(Long id);
+    boolean softDeleteCIF(Long id); // Soft delete (set status to 2)
+    boolean restoreCIF(Long id);
 }

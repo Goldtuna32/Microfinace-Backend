@@ -23,13 +23,13 @@ public class SmeLoanCollateralController {
         return ResponseEntity.ok(loanCollateralService.linkCollateralToLoan(dto));
     }
 
-    @GetMapping("/loan/{loanId}")
-    public ResponseEntity<List<SmeLoanCollateralDTO>> getCollateralsForLoan(@PathVariable Long loanId) {
-        return ResponseEntity.ok(loanCollateralService.getCollateralsForLoan(loanId));
-    }
-
-    @GetMapping("/collateral/{collateralId}")
-    public ResponseEntity<List<SmeLoanCollateralDTO>> getLoansForCollateral(@PathVariable Long collateralId) {
-        return ResponseEntity.ok(loanCollateralService.getLoansForCollateral(collateralId));
-    }
+//    @GetMapping("/loan/{loanId}")
+//    public ResponseEntity<List<SmeLoanCollateralDTO>> getCollateralsForLoan(@PathVariable Long loanId) {
+//        return ResponseEntity.ok(loanCollateralService.getCollateralsForLoan(loanId));
+//    }
+//
+//    @GetMapping("/collateral/{collateralId}")
+//    public ResponseEntity<List<SmeLoanCollateralDTO>> getLoansForCollateral(@PathVariable Long collateralId) {
+//        return ResponseEntity.ok(loanCollateralService.getLoansForCollateral(collateralId));
+//    }
 }

@@ -22,20 +22,37 @@ public class SmeLoanRegistrationController {
     private SmeLoanRegistrationService loanService;
 
     @PostMapping("/register")
-    public ResponseEntity<SmeLoanRegistration> registerLoan(
-            @RequestBody LoanRegistrationRequest request) {
-
-        SmeLoanRegistration loan = request.getLoan();
-        List<SmeLoanCollateral> collaterals = request.getCollaterals();
-
-        SmeLoanRegistration savedLoan = loanService.registerLoan(loan, collaterals);
-
+    public ResponseEntity<SmeLoanRegistrationDTO> registerLoan(@RequestBody LoanRegistrationRequest request) {
+        System.out.println("request = " + request);
+        SmeLoanRegistrationDTO savedLoan = loanService.registerLoan(request);
         return ResponseEntity.ok(savedLoan);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<SmeLoanRegistrationDTO> getLoanById(@PathVariable Long id) {
         return ResponseEntity.ok(loanService.getLoanById(id));
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<List<SmeLoanRegistrationDTO>> getPendingLoans() {
+        return ResponseEntity.ok(loanService.getPendingLoans());
+    }
+
+    @GetMapping("/approved")
+    public ResponseEntity<List<SmeLoanRegistrationDTO>> getApprovedLoans() {
+        return ResponseEntity.ok(loanService.getApprovedLoans());
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<SmeLoanRegistrationDTO> approveLoan(@PathVariable Long id) {
+        SmeLoanRegistrationDTO approvedLoan = loanService.approveLoan(id);
+        return ResponseEntity.ok(approvedLoan);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<SmeLoanRegistrationDTO> updateLoan(@PathVariable Long id, @RequestBody SmeLoanRegistrationDTO dto) {
+        SmeLoanRegistrationDTO updatedLoan = loanService.updateLoan(id, dto);
+        return ResponseEntity.ok(updatedLoan);
     }
 
 

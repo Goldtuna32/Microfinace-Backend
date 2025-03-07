@@ -81,7 +81,7 @@ public class BranchServiceImpl implements BranchService {
 
         Branch branch = modelMapper.map(branchDTO, Branch.class);
         branch.setAddress(address);
-
+        branch.setStatus(1);
         branch.setCreatedDate(new Date());
         branch.setUpdatedDate(new Date());
         branch.setBranchCode(generateBranchCode(addressDTO.getRegion(), addressDTO.getDistrict()));

@@ -33,6 +33,9 @@ public class SmeLoanRegistration {
     @Column(name = "one_hundred_and_eighty_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
     private BigDecimal one_hundred_and_eighty_late_fee_rate;
 
+    @Column(name = "due_date", nullable = true)
+    private LocalDateTime dueDate;
+
     @Column(name = "grace_period", nullable = false)
     private Integer gracePeriod;
 

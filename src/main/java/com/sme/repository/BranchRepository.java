@@ -26,5 +26,8 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     Page<Branch> findAll(Pageable pageable);
 
 
+    @Query("SELECT b.branchCode FROM Branch b WHERE b.address.region = :region ORDER BY b.branchCode DESC LIMIT 1")
+    String findLastBranchCodeByRegion(@Param("region") String region);
+
 
 }

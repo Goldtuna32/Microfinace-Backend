@@ -54,22 +54,26 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional
-    public String generateBranchCode(String region, String township) {
+    public String generateBranchCode(String region) {
         String regionCode = getRegionCode(region);
-        String townshipCode = getTownshipCode(township);
-        String lastBranchCode = branchRepository.findLastBranchCodeByRegionAndTownship(region, township);
+        String lastBranchCode = branchRepository.findLastBranchCodeByRegion(region); // Updated repository method
 
         if (lastBranchCode == null || lastBranchCode.isEmpty()) {
-            return regionCode + "-" + townshipCode + "-0001";
+            return regionCode + "-0001";
         }
 
         try {
-            int lastNumber = Integer.parseInt(lastBranchCode.substring(regionCode.length() + townshipCode.length() + 2));
+            // Extract the numeric part after the region code and hyphen
+            // Format: "{regionCode}-{number}", so skip regionCode length + 1 for the hyphen
+            int prefixLength = regionCode.length() + 1;
+            int lastNumber = Integer.parseInt(lastBranchCode.substring(prefixLength));
             int newNumber = lastNumber + 1;
-            return regionCode + "-" + townshipCode + "-" + String.format("%04d", newNumber);
+
+            // Format as a 4-digit string
+            return regionCode + "-" + String.format("%04d", newNumber);
         } catch (NumberFormatException e) {
             System.err.println("Error parsing branch code: " + lastBranchCode);
-            return regionCode + "-" + townshipCode + "-0001";
+            return regionCode + "-0001"; // Fallback to "0001" on error
         }
     }
 
@@ -84,7 +88,7 @@ public class BranchServiceImpl implements BranchService {
         branch.setStatus(1);
         branch.setCreatedDate(new Date());
         branch.setUpdatedDate(new Date());
-        branch.setBranchCode(generateBranchCode(addressDTO.getRegion(), addressDTO.getDistrict()));
+        branch.setBranchCode(generateBranchCode(addressDTO.getRegion()));
 
         Branch savedBranch = branchRepository.save(branch);
 

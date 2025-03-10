@@ -322,26 +322,60 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
         
-        
+        if (lateDays <= 0) {
+            return BigDecimal.ZERO;
+        }
 
-        if (lateDays > 0) {
+        SmeLoanRegistration loan = schedule.getSmeLoan();
+        if (lateDays >= 90) {
+            // Calculate total outstanding amount for loans >= 90 days late
+            BigDecimal totalOutstanding = BigDecimal.ZERO;
+            
+            // Get all active schedules for this loan using existing method
+            List<RepaymentSchedule> activeSchedules = repaymentScheduleRepository
+                .findBySmeLoan(loan).stream()
+                .filter(s -> s.getStatus() != 6)
+                .collect(Collectors.toList());
+            
+            for (RepaymentSchedule activeSchedule : activeSchedules) {
+                // Sum interest overdue
+                totalOutstanding = totalOutstanding.add(activeSchedule.getInterestOverDue());
+                // Sum active interest
+                if (activeSchedule.getStatus() == 1) {
+                    totalOutstanding = totalOutstanding.add(activeSchedule.getInterestAmount());
+                }
+                // Sum principal
+                totalOutstanding = totalOutstanding.add(activeSchedule.getPrincipalAmount());
+            }
+
+            BigDecimal ninetyDayRate = loan.getNinety_day_late_fee_rate();
+            if (ninetyDayRate == null) {
+                ninetyDayRate = new BigDecimal("8.00"); // 8% default rate for 90+ days
+            }
+
+            // Calculate late fee for 90+ days
+            BigDecimal dailyRate = ninetyDayRate
+                .divide(new BigDecimal("100"))
+                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
+
+            BigDecimal lateFee = totalOutstanding.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
+            return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
+        } else {
+            // Original calculation for < 90 days
             BigDecimal interestOverDue = schedule.getInterestOverDue();
-            BigDecimal annualRatePercentage = schedule.getSmeLoan().getLate_fee_rate();
+            BigDecimal annualRatePercentage = loan.getLate_fee_rate();
             
             if (annualRatePercentage == null) {
                 annualRatePercentage = new BigDecimal("4.00"); // 4% default annual rate
             }
 
-            // Convert annual rate to daily rate
             BigDecimal dailyRate = annualRatePercentage
-                .divide(new BigDecimal("100")) // Convert percentage to decimal
-                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP); // Convert to daily rate
+                .divide(new BigDecimal("100"))
+                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
 
             BigDecimal lateFee = interestOverDue.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
-            return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP); // Round to 2 decimal places
+            return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
         }
-
-        return BigDecimal.ZERO;
     }
 
     private void processAvailableLateFees(List<RepaymentSchedule> overdueSchedules, 

@@ -1,6 +1,7 @@
 package com.sme.repository;
 
 import com.sme.entity.RepaymentSchedule;
+import com.sme.entity.SmeLoanRegistration;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,4 +41,7 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
     List<RepaymentSchedule> findSchedulesForProcessing(@Param("today") LocalDate today);
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.smeLoan.id = :loanId AND rs.interestOverDue > 0 ORDER BY rs.dueDate")
         List<RepaymentSchedule> findOverdueSchedulesByLoanOrderByDueDate(@Param("loanId") Long loanId);
+
+    List<RepaymentSchedule> findBySmeLoan(SmeLoanRegistration loan);
+    List<RepaymentSchedule> findBySmeLoanAndStatusNot(SmeLoanRegistration loan, int status);
 }

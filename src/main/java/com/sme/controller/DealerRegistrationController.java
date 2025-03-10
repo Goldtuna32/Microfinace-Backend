@@ -6,12 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/dealer-registration")
 public class DealerRegistrationController {
 
     @Autowired
     private DealerRegistrationService dealerService;
+
+    @GetMapping
+    public List<DealerRegistrationDTO> getDealerRegistrations() {
+        return dealerService.getAllDealerRegistrations();
+    }
 
     @PostMapping
     public ResponseEntity<DealerRegistrationDTO> createDealer(@RequestBody DealerRegistrationDTO dto) {

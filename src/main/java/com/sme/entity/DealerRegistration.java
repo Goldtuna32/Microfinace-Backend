@@ -33,10 +33,10 @@ public class DealerRegistration {
 
 
     @OneToOne
-    private Address addressId;
+    private Address address;
 
     @OneToOne
-    private CurrentAccount currentAccountId;
+    private CurrentAccount currentAccount;
 
     @OneToMany(mappedBy = "dealerRegistration", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference

@@ -40,8 +40,8 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
 
             // Step 3: Create DealerRegistration and set the Address and CurrentAccount
             DealerRegistration dealer = modelMapper.map(dto, DealerRegistration.class);
-            dealer.setAddressId(address); // Set the Address foreign key
-            dealer.setCurrentAccountId(currentAccount); // Set the CurrentAccount foreign key
+            dealer.setAddress(address); // Set the Address foreign key
+            dealer.setCurrentAccount(currentAccount); // Set the CurrentAccount foreign key
 
             dealer = dealerRepository.save(dealer);
 
@@ -64,13 +64,13 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
         dealer.setStatus(dto.getStatus());
 
         // Update Address if needed
-        Address address = dealer.getAddressId();
+        Address address = dealer.getAddress();
         address.setStreet(dto.getAddress().getStreet());
         address.setDistrict(dto.getAddress().getDistrict());
         address.setTownship(dto.getAddress().getTownship());
         address = addressRepository.save(address); // Save updated Address
 
-        dealer.setAddressId(address); // Link updated Address
+        dealer.setAddress(address); // Link updated Address
         dealer = dealerRepository.save(dealer); // Save updated DealerRegistration
 
         return modelMapper.map(dealer, DealerRegistrationDTO.class);

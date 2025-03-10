@@ -12,6 +12,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class DealerRegistrationServiceImpl implements DealerRegistrationService {
 
@@ -81,6 +84,14 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
         DealerRegistration dealer = dealerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Dealer not found"));
         return modelMapper.map(dealer, DealerRegistrationDTO.class);
+    }
+
+    @Override
+    public List<DealerRegistrationDTO> getAllDealerRegistrations() {
+        List<DealerRegistration> dealers = dealerRepository.findAll();
+        return dealers.stream()
+                .map(dealer -> modelMapper.map(dealer, DealerRegistrationDTO.class))
+                .collect(Collectors.toList());
     }
 
     @Override

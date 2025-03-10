@@ -15,6 +15,7 @@ public class HpProductDTO {
     private Long productTypeId;
     private Long dealerRegistrationId;
     private BigDecimal commissionFee; // ✅ Ensure this is included
+    private String hpProductPhoto;
 
 
 }

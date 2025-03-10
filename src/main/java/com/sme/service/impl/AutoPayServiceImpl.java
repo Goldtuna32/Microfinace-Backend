@@ -71,18 +71,13 @@ public class AutoPayServiceImpl implements AutoPaymentService {
     }
 
     private void processSchedules(List<RepaymentSchedule> schedules, boolean isOverdue) {
-        // Group schedules by loan to avoid duplicate processing
         Map<Long, List<RepaymentSchedule>> schedulesByLoan = schedules.stream()
             .collect(Collectors.groupingBy(schedule -> schedule.getSmeLoan().getId()));
 
-        // Keep track of processed loans
         Set<Long> processedLoans = new HashSet<>();
 
-        // Process each loan's schedules
         for (Map.Entry<Long, List<RepaymentSchedule>> entry : schedulesByLoan.entrySet()) {
             Long loanId = entry.getKey();
-            
-            // Skip if loan was already processed
             if (processedLoans.contains(loanId)) {
                 continue;
             }
@@ -90,8 +85,6 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             List<RepaymentSchedule> loanSchedules = entry.getValue();
             RepaymentSchedule firstSchedule = loanSchedules.get(0);
             SmeLoanRegistration loan = firstSchedule.getSmeLoan();
-            
-            System.out.println("\n=== Processing Loan ID: " + loan.getId() + " ===");
             
             if (loan == null || loan.getCurrentAccount() == null) {
                 System.out.println("Skipping: No linked loan or account");
@@ -115,7 +108,6 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 processIndividualSchedule(schedule, account, isOverdue);
             }
 
-            // Mark this loan as processed
             processedLoans.add(loanId);
         }
     }

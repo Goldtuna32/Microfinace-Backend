@@ -4,10 +4,7 @@ import com.sme.dto.CIFDTO;
 import com.sme.service.CIFService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,79 +28,15 @@ public class CIFController {
     private CIFService cifService;
 
     @GetMapping("/active")
-    public ResponseEntity<Page<CIFDTO>> getAllCIFs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction) {
-
-        // Fetch all active CIFs
-        List<CIFDTO> allCifs = cifService.getAllCIFs();
-
-        // Apply sorting
-        Comparator<CIFDTO> comparator;
-        switch (sortBy.toLowerCase()) {
-            case "name":
-                comparator = Comparator.comparing(CIFDTO::getName);
-                break;
-            case "nrcnumber":
-                comparator = Comparator.comparing(CIFDTO::getNrcNumber);
-                break;
-            // Add other sortable fields as needed
-            default:
-                comparator = Comparator.comparing(CIFDTO::getId);
-        }
-        if (direction.equalsIgnoreCase("desc")) {
-            comparator = comparator.reversed();
-        }
-        List<CIFDTO> sortedCifs = allCifs.stream().sorted(comparator).collect(Collectors.toList());
-
-        // Apply pagination
-        Pageable pageable = PageRequest.of(page, size);
-        int start = Math.min((int) pageable.getOffset(), sortedCifs.size());
-        int end = Math.min(start + pageable.getPageSize(), sortedCifs.size());
-        List<CIFDTO> paginatedCifs = sortedCifs.subList(start, end);
-
-        Page<CIFDTO> pageResult = new PageImpl<>(paginatedCifs, pageable, sortedCifs.size());
-        return ResponseEntity.ok(pageResult);
+    public ResponseEntity<List<CIFDTO>> getAllCIFs() {
+        List<CIFDTO> cifList = cifService.getAllCIFs();
+        return ResponseEntity.ok(cifList);
     }
 
     @GetMapping("/deleted")
-    public ResponseEntity<Page<CIFDTO>> getDeletedCIFs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction) {
-
-        // Fetch all deleted CIFs
-        List<CIFDTO> allCifs = cifService.getDeletedCIFs();
-
-        // Apply sorting
-        Comparator<CIFDTO> comparator;
-        switch (sortBy.toLowerCase()) {
-            case "name":
-                comparator = Comparator.comparing(CIFDTO::getName);
-                break;
-            case "nrcnumber":
-                comparator = Comparator.comparing(CIFDTO::getNrcNumber);
-                break;
-            // Add other sortable fields as needed
-            default:
-                comparator = Comparator.comparing(CIFDTO::getId);
-        }
-        if (direction.equalsIgnoreCase("desc")) {
-            comparator = comparator.reversed();
-        }
-        List<CIFDTO> sortedCifs = allCifs.stream().sorted(comparator).collect(Collectors.toList());
-
-        // Apply pagination
-        Pageable pageable = PageRequest.of(page, size);
-        int start = Math.min((int) pageable.getOffset(), sortedCifs.size());
-        int end = Math.min(start + pageable.getPageSize(), sortedCifs.size());
-        List<CIFDTO> paginatedCifs = sortedCifs.subList(start, end);
-
-        Page<CIFDTO> pageResult = new PageImpl<>(paginatedCifs, pageable, sortedCifs.size());
-        return ResponseEntity.ok(pageResult);
+    public ResponseEntity<List<CIFDTO>> getDeletedCIFs() {
+        List<CIFDTO> cifList = cifService.getDeletedCIFs();
+        return ResponseEntity.ok(cifList);
     }
 
 

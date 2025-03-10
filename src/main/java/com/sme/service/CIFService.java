@@ -11,8 +11,9 @@ import java.util.Optional;
 
 public interface CIFService {
 
-    List<CIFDTO> getAllCIFs();
     List<CIFDTO> getDeletedCIFs();
+    List<CIFDTO> getAllCIFs();
+    List<CIFDTO> getAllCifs();
 
     Optional<CIFDTO> getCIFById(Long id);
 

@@ -44,9 +44,9 @@ public class HpRegistration {
     private Integer status;
 
 
-    @Column(name = "current_account_id", nullable = false)
-    private Long currentAccountId;
+    @OneToOne
+    private CurrentAccount currentAccount;
 
-    @Column(name = "hp_product_id", nullable = false)
-    private Long hpProductId;
+    @OneToOne
+    private HpProduct hpProduct;
 }

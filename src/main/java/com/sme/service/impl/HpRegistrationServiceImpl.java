@@ -60,8 +60,8 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         if (dto.getStartDate() != null) existingHp.setStartDate(dto.getStartDate());
         if (dto.getEndDate() != null) existingHp.setEndDate(dto.getEndDate());
         if (dto.getStatus() != null) existingHp.setStatus(dto.getStatus());
-        if (dto.getCurrentAccountId() != null) existingHp.setCurrentAccountId(dto.getCurrentAccountId());
-        if (dto.getHpProductId() != null) existingHp.setHpProductId(dto.getHpProductId());
+//        if (dto.getCurrentAccountId() != null) existingHp.setCurrentAccountId(dto.getCurrentAccountId());
+//        if (dto.getHpProductId() != null) existingHp.setHpProductId(dto.getHpProductId());
 
         HpRegistration updatedHp = repository.save(existingHp);
         return modelMapper.map(updatedHp, HpRegistrationDTO.class);

@@ -39,23 +39,31 @@ public class CIFServiceImpl implements CIFService {
 
     private final Cloudinary cloudinary;
 
-    @Override
-    @Transactional
     public List<CIFDTO> getAllCIFs() {
-        List<CIF> cifs = cifRepository.findByStatus(1); // Status 1 for active
+        // Fetch active CIFs (status = 0)
+        List<CIF> cifList = cifRepository.findByStatus(1);
+        // Or if using deleted flag: cifRepository.findByDeletedFalse();
+        return cifList.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    public List<CIFDTO> getDeletedCIFs() {
+        // Fetch deleted CIFs (status = 1)
+        List<CIF> cifList = cifRepository.findByStatus(2);
+        // Or if using deleted flag: cifRepository.findByDeletedTrue();
+        return cifList.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    public List<CIFDTO> getAllCifs() {
+        List<CIF> cifs = cifRepository.findAll();
         return cifs.stream()
                 .map(cif -> modelMapper.map(cif, CIFDTO.class))
                 .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional
-    public List<CIFDTO> getDeletedCIFs() {
-        List<CIF> cifs = cifRepository.findByStatus(2); // Status 2 for deleted
-        return cifs.stream()
-                .map(cif -> modelMapper.map(cif, CIFDTO.class))
-                .collect(Collectors.toList());
-    }
 
 
     @Override

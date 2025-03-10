@@ -149,6 +149,19 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         LocalDate dueDate = schedule.getDueDate();
         LocalDate graceEndDate = schedule.getGraceEndDate();
 
+        // Calculate late days for logging
+        Optional<RepaymentTransaction> lastLateFeePayment = repaymentTransactionRepository
+            .findTopByRepaymentScheduleAndLateFeePaidDateIsNotNullOrderByLateFeePaidDateDesc(schedule);
+        LocalDate startDate = lastLateFeePayment
+            .map(transaction -> transaction.getLateFeePaidDate().toLocalDate())
+            .orElse(dueDate);
+        long lateDays = ChronoUnit.DAYS.between(startDate, today);
+
+        System.out.println("Schedule " + schedule.getId() + " Late Days Calculation:");
+        System.out.println("  Start Date: " + startDate);
+        System.out.println("  Today: " + today);
+        System.out.println("  Late Days: " + lateDays);
+
         // Skip if already processed successfully
         if (schedule.getStatus() == 6) {
             System.out.println("Skipping: Already completed");
@@ -308,6 +321,8 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             .orElse(dueDate);
 
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
+        
+        
 
         if (lateDays > 0) {
             BigDecimal interestOverDue = schedule.getInterestOverDue();

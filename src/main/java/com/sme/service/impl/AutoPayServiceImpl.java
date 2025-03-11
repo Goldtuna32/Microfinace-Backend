@@ -2,8 +2,8 @@ package com.sme.service.impl;
 
 import com.sme.entity.*;
 import com.sme.repository.*;
-import com.sme.service.AutoPaymentService;
-import com.sme.service.HolidayService;
+import com.sme.service.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,9 +13,8 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -27,11 +26,23 @@ public class AutoPayServiceImpl implements AutoPaymentService {
     private final CurrentAccountRepository currentAccountRepository;
     private final AccountTransactionRepository accountTransactionRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private EmailService emailService;
+    @Autowired
+    private SmsService smsService;
+    @Autowired
+    private NotificationService notificationService;
+
+
+
     public AutoPayServiceImpl(HolidayService holidayService,
-            RepaymentScheduleRepository repaymentScheduleRepository,
-            RepaymentTransactionRepository repaymentTransactionRepository,
-            CurrentAccountRepository currentAccountRepository,
-            AccountTransactionRepository accountTransactionRepository) {
+                              RepaymentScheduleRepository repaymentScheduleRepository,
+                              RepaymentTransactionRepository repaymentTransactionRepository,
+                              CurrentAccountRepository currentAccountRepository,
+                              AccountTransactionRepository accountTransactionRepository) {
         this.holidayService = holidayService;
         this.repaymentScheduleRepository = repaymentScheduleRepository;
         this.repaymentTransactionRepository = repaymentTransactionRepository;
@@ -59,9 +70,103 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         for (RepaymentSchedule schedule : schedulesToProcess) {
             boolean isOverdue = today.isAfter(schedule.getGraceEndDate());
+            notifyOverduePayment(schedule);
             processSchedules(Arrays.asList(schedule), isOverdue);
         }
     }
+
+    @Scheduled(cron = "0 0 0,6,12,18 * * *") // Runs at 00:00, 06:00, 12:00, 18:00
+    public void sendOverdueNotifications() {
+        LocalDate today = LocalDate.now();
+        if (holidayService.isHoliday(today)) {
+            System.out.println("Skipping Notifications: Today is a holiday.");
+            return;
+        }
+        System.out.println("====== Sending Overdue Notifications - " + today + " ======");
+
+        List<RepaymentSchedule> overdueSchedules = repaymentScheduleRepository
+                .findSchedulesForProcessing(today)
+                .stream()
+                .filter(schedule -> today.isAfter(schedule.getGraceEndDate()))
+                .filter(schedule -> "PENDING".equals(schedule.getStatus()))
+                .collect(Collectors.toList());
+
+        if (overdueSchedules.isEmpty()) {
+            System.out.println("No overdue PENDING schedules found for notification on " + today);
+        } else {
+            System.out.println("Found " + overdueSchedules.size() + " overdue schedules to notify.");
+            for (RepaymentSchedule schedule : overdueSchedules) {
+                notifyOverduePayment(schedule);
+            }
+        }
+    }
+
+    private void notifyOverduePayment(RepaymentSchedule schedule) {
+        LocalDate today = LocalDate.now();
+
+        // Check if a notification has already been sent today for this schedule
+        boolean alreadyNotified = notificationRepository
+                .existsBySmeLoanAndCreatedAtBetween(schedule.getSmeLoan(), today.atStartOfDay(), today.plusDays(1).atStartOfDay());
+
+        if (alreadyNotified) {
+            System.out.println("Skipping notification for schedule #" + schedule.getId() +
+                    " - Already notified today.");
+            return;
+        }
+
+        SmeLoanRegistration loan = schedule.getSmeLoan();
+        CurrentAccount currentAccount = loan.getCurrentAccount();
+        CIF cif = currentAccount.getCif();
+
+        String email = cif.getEmail();
+        String rawPhoneNumber = cif.getPhoneNumber();
+        String phoneNumber = "+95" + rawPhoneNumber.replaceFirst("^0", "");
+        String customerName = cif.getName();
+
+        String subject = "Overdue Payment Notification - Loan #" + loan.getId();
+        String emailBody = String.format(
+                "Dear %s,\n\nYour loan payment (Schedule #%d) is overdue as of %s.\n" +
+                        "Due Date: %s\nAmount: %s\nPlease make the payment at your earliest convenience.\n\n" +
+                        "Regards,\nSME Loan Team",
+                customerName, schedule.getId(), LocalDate.now(), schedule.getDueDate(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A"
+        );
+
+        String smsBody = String.format(
+                "Dear %s, Your loan payment (Schedule #%d) is overdue. " +
+                        "Amount: %s. Due: %s. Please pay ASAP.",
+                customerName, schedule.getId(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+                schedule.getDueDate()
+        );
+
+        String notificationBody = String.format(
+                "Loan #%d payment overdue. Amount: %s. Due: %s",
+                loan.getId(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+                schedule.getDueDate()
+        );
+
+        try {
+            System.out.println("Sending email to " + email);
+            emailService.sendEmail(email, subject, emailBody);
+            System.out.println("Sending SMS to " + phoneNumber);
+            smsService.sendSms(phoneNumber, smsBody);
+
+            // Store notification in the database
+            Notification notification = new Notification();
+            notification.setAccountId(currentAccount.getId());
+            notification.setType("OVERDUE_PAYMENT");
+            notification.setMessage(notificationBody);
+            notification.setSmeLoan(loan);
+            notificationRepository.save(notification);
+
+            System.out.println("Notification saved for schedule #" + schedule.getId());
+        } catch (Exception e) {
+            System.err.println("Failed to send notifications for schedule #" + schedule.getId() + ": " + e.getMessage());
+        }
+    }
+
 
     private void processSchedules(List<RepaymentSchedule> schedules, boolean isOverdue) {
         for (RepaymentSchedule schedule : schedules) {

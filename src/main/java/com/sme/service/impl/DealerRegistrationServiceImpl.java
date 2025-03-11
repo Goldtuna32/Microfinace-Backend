@@ -12,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,8 +44,9 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
 
             // Step 3: Create DealerRegistration and set the Address and CurrentAccount
             DealerRegistration dealer = modelMapper.map(dto, DealerRegistration.class);
-            dealer.setAddressId(address); // Set the Address foreign key
-            dealer.setCurrentAccountId(currentAccount); // Set the CurrentAccount foreign key
+            dealer.setAddress(address); // Set the Address foreign key
+            dealer.setCurrentAccount(currentAccount); // Set the CurrentAccount foreign key
+            dealer.setRegistrationDate(LocalDateTime.now());
 
             dealer = dealerRepository.save(dealer);
 
@@ -67,13 +69,13 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
         dealer.setStatus(dto.getStatus());
 
         // Update Address if needed
-        Address address = dealer.getAddressId();
+        Address address = dealer.getAddress();
         address.setStreet(dto.getAddress().getStreet());
         address.setDistrict(dto.getAddress().getDistrict());
         address.setTownship(dto.getAddress().getTownship());
         address = addressRepository.save(address); // Save updated Address
 
-        dealer.setAddressId(address); // Link updated Address
+        dealer.setAddress(address); // Link updated Address
         dealer = dealerRepository.save(dealer); // Save updated DealerRegistration
 
         return modelMapper.map(dealer, DealerRegistrationDTO.class);

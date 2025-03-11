@@ -15,7 +15,7 @@ public class DealerRegistrationController {
     @Autowired
     private DealerRegistrationService dealerService;
 
-    @GetMapping
+    @GetMapping("/all")
     public List<DealerRegistrationDTO> getDealerRegistrations() {
         return dealerService.getAllDealerRegistrations();
     }
@@ -31,7 +31,7 @@ public class DealerRegistrationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DealerRegistrationDTO> getDealer(@PathVariable Long id) {
+    public ResponseEntity<DealerRegistrationDTO> getDealer(@PathVariable("id") Long id) {
         return ResponseEntity.ok(dealerService.getDealer(id));
     }
 

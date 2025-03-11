@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Date;
-
+import java.util.List;
 
 
 @RestController
@@ -32,18 +32,12 @@ public class AccountTransactionController {
         }
     }
     @GetMapping("/current-account/{accountId}")
-    public ResponseEntity<Page<AccountTransaction>> getTransactionsByCurrentAccount(
-            @PathVariable Long accountId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "transactionDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
-
-        Page<AccountTransaction> transactions = transactionService.getTransactionsByCurrentAccount(
-                accountId, page, size, sortBy, sortDir);
-
+    public ResponseEntity<List<AccountTransactionDTO>> getTransactionsByCurrentAccount(@PathVariable Long accountId) {
+        List<AccountTransactionDTO> transactions = transactionService.getTransactionsByCurrentAccount(accountId);
         return ResponseEntity.ok(transactions);
     }
+
+
 
 //    @GetMapping("/current-account/{accountId}")
 //    public ResponseEntity<Page<AccountTransaction>> getTransactionsByCurrentAccount(

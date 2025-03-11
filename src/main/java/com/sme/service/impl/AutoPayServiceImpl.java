@@ -115,15 +115,61 @@ public class AutoPayServiceImpl implements AutoPaymentService {
     private void processLateFees(List<RepaymentSchedule> overdueSchedules, CurrentAccount account, 
             BigDecimal balance, BigDecimal holdAmount) {
         BigDecimal totalAvailable = balance.add(holdAmount);
-        BigDecimal totalLateFee = BigDecimal.ZERO;
         
-        // Calculate total late fees once
+        // Get the first schedule to check late days
+        RepaymentSchedule firstSchedule = overdueSchedules.get(0);
+        LocalDate today = LocalDate.now();
+        LocalDate dueDate = firstSchedule.getDueDate();
+        long lateDays = ChronoUnit.DAYS.between(dueDate, today);
+
+        // Calculate ONE late fee for 90+ days overdue
+        if (lateDays >= 90) {
+            SmeLoanRegistration loan = firstSchedule.getSmeLoan();
+            BigDecimal totalOutstanding = BigDecimal.ZERO;
+            
+            // Calculate total outstanding from all schedules
+            for (RepaymentSchedule schedule : overdueSchedules) {
+                totalOutstanding = totalOutstanding
+                    .add(schedule.getInterestOverDue())
+                    .add(schedule.getInterestAmount())
+                    .add(schedule.getPrincipalAmount());
+            }
+
+            BigDecimal ninetyDayRate = loan.getNinety_day_late_fee_rate();
+            if (ninetyDayRate == null) {
+                ninetyDayRate = new BigDecimal("8.00");
+            }
+
+            // Add logging for the three key values
+            System.out.println("90+ Days Late Fee Calculation:");
+            System.out.println("  Total Outstanding Amount: " + totalOutstanding);
+            System.out.println("  90-Day Late Fee Rate: " + ninetyDayRate + "%");
+            System.out.println("  Maximum Late Days: " + lateDays);
+
+            // Calculate single late fee for the entire loan
+            BigDecimal dailyRate = ninetyDayRate
+                .divide(new BigDecimal("100"))
+                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
+            BigDecimal lateFee = totalOutstanding.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
+            lateFee = lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
+
+            // Create single transaction for the entire late fee
+            if (lateFee.compareTo(BigDecimal.ZERO) > 0) {
+                createLateFeeTransaction(firstSchedule, account, lateFee, BigDecimal.ZERO);
+            }
+            
+            System.out.println("90+ days overdue - Single late fee: " + lateFee);
+            return;
+        }
+
+        // For less than 90 days, process individual late fees as before
+        BigDecimal totalLateFee = BigDecimal.ZERO;
         Map<Long, BigDecimal> lateFeesBySchedule = new HashMap<>();
+        
         for (RepaymentSchedule overdueSchedule : overdueSchedules) {
             BigDecimal lateFee = calculateLateFee(overdueSchedule);
             lateFeesBySchedule.put(overdueSchedule.getId(), lateFee);
             totalLateFee = totalLateFee.add(lateFee);
-            
             System.out.println("Term " + overdueSchedule.getId() + " Late Fee: " + lateFee);
         }
         
@@ -149,16 +195,11 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         LocalDate dueDate = schedule.getDueDate();
         LocalDate graceEndDate = schedule.getGraceEndDate();
 
-        // Calculate late days for logging
-        Optional<RepaymentTransaction> lastLateFeePayment = repaymentTransactionRepository
-            .findTopByRepaymentScheduleAndLateFeePaidDateIsNotNullOrderByLateFeePaidDateDesc(schedule);
-        LocalDate startDate = lastLateFeePayment
-            .map(transaction -> transaction.getLateFeePaidDate().toLocalDate())
-            .orElse(dueDate);
-        long lateDays = ChronoUnit.DAYS.between(startDate, today);
+        // Calculate late days from due date instead of last payment date
+        long lateDays = ChronoUnit.DAYS.between(dueDate, today);
 
         System.out.println("Schedule " + schedule.getId() + " Late Days Calculation:");
-        System.out.println("  Start Date: " + startDate);
+        System.out.println("  Start Date: " + dueDate);
         System.out.println("  Today: " + today);
         System.out.println("  Late Days: " + lateDays);
 
@@ -328,24 +369,21 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         SmeLoanRegistration loan = schedule.getSmeLoan();
         if (lateDays >= 90) {
-            // Calculate total outstanding amount for loans >= 90 days late
+            // For 90+ days late, calculate total outstanding and use maximum late days
             BigDecimal totalOutstanding = BigDecimal.ZERO;
             
-            // Get all active schedules for this loan using existing method
+            // Get all active schedules for this loan
             List<RepaymentSchedule> activeSchedules = repaymentScheduleRepository
                 .findBySmeLoan(loan).stream()
                 .filter(s -> s.getStatus() != 6)
                 .collect(Collectors.toList());
             
+            // Calculate total outstanding amount
             for (RepaymentSchedule activeSchedule : activeSchedules) {
-                // Sum interest overdue
-                totalOutstanding = totalOutstanding.add(activeSchedule.getInterestOverDue());
-                // Sum active interest
-                if (activeSchedule.getStatus() == 1) {
-                    totalOutstanding = totalOutstanding.add(activeSchedule.getInterestAmount());
-                }
-                // Sum principal
-                totalOutstanding = totalOutstanding.add(activeSchedule.getPrincipalAmount());
+                totalOutstanding = totalOutstanding
+                    .add(activeSchedule.getInterestOverDue())
+                    .add(activeSchedule.getInterestAmount())
+                    .add(activeSchedule.getPrincipalAmount());
             }
 
             BigDecimal ninetyDayRate = loan.getNinety_day_late_fee_rate();
@@ -353,7 +391,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 ninetyDayRate = new BigDecimal("8.00"); // 8% default rate for 90+ days
             }
 
-            // Calculate late fee for 90+ days
+            // Simple calculation: outstanding × late days × rate
             BigDecimal dailyRate = ninetyDayRate
                 .divide(new BigDecimal("100"))
                 .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
@@ -361,7 +399,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             BigDecimal lateFee = totalOutstanding.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
             return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
         } else {
-            // Original calculation for < 90 days
+            // Original calculation for < 90 days remains the same
             BigDecimal interestOverDue = schedule.getInterestOverDue();
             BigDecimal annualRatePercentage = loan.getLate_fee_rate();
             

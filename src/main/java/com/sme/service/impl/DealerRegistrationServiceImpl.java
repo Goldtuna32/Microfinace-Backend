@@ -12,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,7 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
             DealerRegistration dealer = modelMapper.map(dto, DealerRegistration.class);
             dealer.setAddress(address); // Set the Address foreign key
             dealer.setCurrentAccount(currentAccount); // Set the CurrentAccount foreign key
+            dealer.setRegistrationDate(LocalDateTime.now());
 
             dealer = dealerRepository.save(dealer);
 

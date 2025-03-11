@@ -42,5 +42,6 @@ public class DealerRegistration {
     @JsonManagedReference
     private List<HpProduct> hpProducts;
 
+    private boolean deleted = false; // Soft delete flag
 
  }

@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AccountTransactionServiceImpl implements AccountTransactionService {
@@ -79,21 +81,19 @@ public class AccountTransactionServiceImpl implements AccountTransactionService 
 
 
     @Override
-    public Page<AccountTransaction> getTransactionsByCurrentAccount(
-            Long currentAccountId,
-            int page,
-            int size,
-            String sortBy,
-            String sortDir) {
+    public List<AccountTransactionDTO> getTransactionsByCurrentAccount(Long accountId) {
+        List<AccountTransaction> transactions = transactionRepository.findByCurrentAccountId(accountId);
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        return transactions.stream()
+                .map(transaction -> {
+                    AccountTransactionDTO dto = modelMapper.map(transaction, AccountTransactionDTO.class);
 
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        return transactionRepository.findByCurrentAccountId(currentAccountId, pageable);
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
+
+
 }
 
 

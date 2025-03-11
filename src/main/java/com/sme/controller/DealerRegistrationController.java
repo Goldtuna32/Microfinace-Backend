@@ -15,7 +15,7 @@ public class DealerRegistrationController {
     @Autowired
     private DealerRegistrationService dealerService;
 
-    @GetMapping
+    @GetMapping("/all")
     public List<DealerRegistrationDTO> getDealerRegistrations() {
         return dealerService.getAllDealerRegistrations();
     }

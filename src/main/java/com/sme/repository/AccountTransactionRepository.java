@@ -13,6 +13,6 @@ import java.util.List;
 
 @Repository
 public interface AccountTransactionRepository extends JpaRepository<AccountTransaction, Integer> {
-    Page<AccountTransaction> findByCurrentAccountId(Long currentAccountId, Pageable pageable);
+    List<AccountTransaction> findByCurrentAccountId(Long accountId);
 
 }

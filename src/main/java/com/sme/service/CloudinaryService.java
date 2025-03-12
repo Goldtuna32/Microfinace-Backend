@@ -35,4 +35,16 @@ public class CloudinaryService {
             throw new RuntimeException("Failed to upload image to Cloudinary", e);
         }
     }
+
+    public void deleteImage(String imageUrl) throws IOException {
+        if (imageUrl != null) {
+            String publicId = extractPublicId(imageUrl);
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        }
+    }
+
+
+    private String extractPublicId(String imageUrl) {
+        return imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf(".")); // Extract Cloudinary public ID
+    }
 }

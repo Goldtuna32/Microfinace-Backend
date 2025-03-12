@@ -28,8 +28,8 @@ public class User {
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
-    @Column(name = "dob",nullable = false)
-    private LocalDateTime dob;
+    @Column(name = "dob",nullable = true)
+    private Date dob;
 
     @Column(name = "created_at", nullable = false,updatable = false)
     private LocalDateTime createdAt;
@@ -41,7 +41,7 @@ public class User {
     @Column(name = "status")
     private Integer status;
 
-    @Column(name = "profile_pictre", length = 255, nullable = false)
+    @Column(name = "profile_picture", length = 255, nullable = true)
     private String profilePicture;
 
 
@@ -65,4 +65,11 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
+    public String getProfileImage() {
+        return profilePicture;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profilePicture = profileImage;
+    }
 }

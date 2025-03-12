@@ -7,17 +7,22 @@ import com.sme.entity.Branch;
 import com.sme.repository.AddressRepository;
 import com.sme.repository.BranchRepository;
 import com.sme.service.BranchService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,23 +39,28 @@ public class BranchServiceImpl implements BranchService {
     @Autowired
     private AddressRepository addressRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private static final Map<String, String> REGION_CODES = new HashMap<>();
+    static {
+        REGION_CODES.put("YANGON", "YGN");
+        REGION_CODES.put("MANDALAY", "MDY");
+        REGION_CODES.put("NAYPYIDAW", "NPT");
+        // Add more mappings
+    }
+
     @Override
     @Transactional
     public String getRegionCode(String region) {
         if (region == null || region.trim().isEmpty()) {
             return "UNK";
         }
-
-
-        return region.trim().substring(0, Math.min(region.length(), 3)).toUpperCase();
+        String normalizedRegion = region.trim().toUpperCase();
+        return REGION_CODES.getOrDefault(normalizedRegion,
+                normalizedRegion.substring(0, Math.min(normalizedRegion.length(), 3)));
     }
 
-
-    @Override
-    @Transactional
-    public String getTownshipCode(String township) {
-        return township.length() >= 3 ? township.substring(0, 3).toUpperCase() : township.toUpperCase();
-    }
 
     @Override
     @Transactional
@@ -154,8 +164,32 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional
-    public Page<BranchDTO> getBranches(Pageable pageable) {
-        Page<Branch> branchPage = branchRepository.findAll(pageable);
-        return branchPage.map(this::convertToDTO);
+    public Page<BranchDTO> getBranches(Pageable pageable, String region, String name, String branchCode) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Branch> cq = cb.createQuery(Branch.class);
+        Root<Branch> root = cq.from(Branch.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (region != null && !region.isEmpty()) {
+            predicates.add(cb.equal(root.get("address").get("region"), region));
+        }
+        if (name != null && !name.isEmpty()) {
+            predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+        }
+        if (branchCode != null && !branchCode.isEmpty()) {
+            predicates.add(cb.like(cb.lower(root.get("branchCode")), "%" + branchCode.toLowerCase() + "%"));
+        }
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        List<Branch> branches = entityManager.createQuery(cq)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+
+        long total = entityManager.createQuery(cq).getResultList().size(); // Note: This is inefficient; see below
+        Page<Branch> branchPage = new PageImpl<>(branches, pageable, total);
+
+        return branchPage.map(this::convertToDTO); // Assuming you have a method to convert Branch to BranchDTO
     }
 }

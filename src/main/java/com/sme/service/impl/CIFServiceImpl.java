@@ -39,20 +39,26 @@ public class CIFServiceImpl implements CIFService {
 
     private final Cloudinary cloudinary;
 
-    public List<CIFDTO> getAllCIFs() {
-        // Fetch active CIFs (status = 0)
-        List<CIF> cifList = cifRepository.findByStatus(1);
-        // Or if using deleted flag: cifRepository.findByDeletedFalse();
-        return cifList.stream()
-                .map(cif -> modelMapper.map(cif, CIFDTO.class))
-                .collect(Collectors.toList());
+    @Override
+    public Page<CIFDTO> getAllCIFs(Pageable pageable, String nrcPrefix) {
+        Page<CIF> cifPage = cifRepository.findActiveCIFs(nrcPrefix, pageable);
+        return cifPage.map(this::convertToDTO);
     }
 
-    public List<CIFDTO> getDeletedCIFs() {
-        // Fetch deleted CIFs (status = 1)
-        List<CIF> cifList = cifRepository.findByStatus(2);
-        // Or if using deleted flag: cifRepository.findByDeletedTrue();
-        return cifList.stream()
+    @Override
+    public Page<CIFDTO> getDeletedCIFs(Pageable pageable, String nrcPrefix) {
+        Page<CIF> cifPage = cifRepository.findDeletedCIFs(nrcPrefix, pageable);
+        return cifPage.map(this::convertToDTO);
+    }
+
+    private CIFDTO convertToDTO(CIF cif) {
+        return modelMapper.map(cif, CIFDTO.class);
+    }
+
+    @Override
+    public List<CIFDTO> getDeletedCIFS() {
+        List<CIF> cifs = cifRepository.findByStatus(2);
+        return cifs.stream()
                 .map(cif -> modelMapper.map(cif, CIFDTO.class))
                 .collect(Collectors.toList());
     }

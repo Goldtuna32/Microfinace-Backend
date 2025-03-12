@@ -8,8 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, Long> {
 
@@ -23,7 +21,15 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     String findLastBranchCodeByRegionAndTownship(@Param("region") String region,
                                                  @Param("township") String township);
 
-    Page<Branch> findAll(Pageable pageable);
+    @Query("SELECT b FROM Branch b " +
+            "WHERE (:region IS NULL OR b.address.region = :region) " +
+            "AND (:name IS NULL OR LOWER(b.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+            "AND (:branchCode IS NULL OR LOWER(b.branchCode) LIKE LOWER(CONCAT('%', :branchCode, '%')))")
+    Page<Branch> findBranches(
+            @Param("region") String region,
+            @Param("name") String name,
+            @Param("branchCode") String branchCode,
+            Pageable pageable);
 
 
     @Query("SELECT b.branchCode FROM Branch b WHERE b.address.region = :region ORDER BY b.branchCode DESC LIMIT 1")

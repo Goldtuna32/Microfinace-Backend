@@ -2,12 +2,15 @@ package com.sme.controller;
 
 import com.sme.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -59,5 +62,20 @@ public class ReportController {
         headers.setContentDispositionFormData("attachment", "deleted_cifs_report.xlsx");
         headers.setContentLength(reportBytes.length);
         return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<Resource> generateReport(@RequestParam String format) throws Exception {
+        byte[] reportBytes = reportService.generateTransactionReport(format);
+
+        String contentType = format.equals("pdf") ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        String fileExtension = format.equals("pdf") ? "pdf" : "xlsx";
+
+        ByteArrayResource resource = new ByteArrayResource(reportBytes);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transaction_report." + fileExtension)
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(resource);
     }
 }

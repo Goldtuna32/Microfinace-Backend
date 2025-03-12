@@ -28,15 +28,23 @@ public class CIFController {
     private CIFService cifService;
 
     @GetMapping("/active")
-    public ResponseEntity<List<CIFDTO>> getAllCIFs() {
-        List<CIFDTO> cifList = cifService.getAllCIFs();
-        return ResponseEntity.ok(cifList);
+    public ResponseEntity<Page<CIFDTO>> getAllCIFs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String nrcPrefix) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CIFDTO> cifPage = cifService.getAllCIFs(pageable, nrcPrefix);
+        return ResponseEntity.ok(cifPage);
     }
 
     @GetMapping("/deleted")
-    public ResponseEntity<List<CIFDTO>> getDeletedCIFs() {
-        List<CIFDTO> cifList = cifService.getDeletedCIFs();
-        return ResponseEntity.ok(cifList);
+    public ResponseEntity<Page<CIFDTO>> getDeletedCIFs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String nrcPrefix) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CIFDTO> cifPage = cifService.getDeletedCIFs(pageable, nrcPrefix);
+        return ResponseEntity.ok(cifPage);
     }
 
 

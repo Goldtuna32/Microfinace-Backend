@@ -11,8 +11,10 @@ import java.util.Optional;
 
 public interface CIFService {
 
-    List<CIFDTO> getDeletedCIFs();
-    List<CIFDTO> getAllCIFs();
+    Page<CIFDTO> getDeletedCIFs(Pageable pageable, String nrcPrefix);
+    Page<CIFDTO> getAllCIFs(Pageable pageable, String nrcPrefix);
+
+    List<CIFDTO> getDeletedCIFS();
     List<CIFDTO> getAllCifs();
 
     Optional<CIFDTO> getCIFById(Long id);

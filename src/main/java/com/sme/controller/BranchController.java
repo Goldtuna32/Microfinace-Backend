@@ -24,6 +24,8 @@ public class BranchController {
     @Autowired
     private BranchService branchService;
 
+
+
     // Get all branches
     @GetMapping
     public List<BranchDTO> getAllBranches() {
@@ -68,12 +70,17 @@ public class BranchController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction) {
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String branchCode) {
 
-        Sort sort = direction.equalsIgnoreCase(Sort.Direction.DESC.name()) ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Sort sort = direction.equalsIgnoreCase(Sort.Direction.DESC.name())
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<BranchDTO> branches = branchService.getBranches(pageable);
 
+        Page<BranchDTO> branches = branchService.getBranches(pageable, region, name, branchCode);
         return ResponseEntity.ok(branches);
     }
 }

@@ -26,9 +26,7 @@ public interface BranchService {
 
     String getRegionCode(String region);
 
-    String getTownshipCode(String township);
-
-    Page<BranchDTO> getBranches(Pageable pageable);
+    Page<BranchDTO> getBranches(Pageable pageable, String region, String name, String branchCode);
 
     BranchDTO createBranch(BranchDTO branchDTO, AddressDTO addressDTO);
 

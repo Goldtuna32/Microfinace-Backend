@@ -23,6 +23,14 @@ public class RepaymentSchedule {
     @Column(name = "grace_end", nullable = false)
     private LocalDate graceEndDate;
 
+    @Column(name = "lastPaymentDate", nullable = true)
+    private LocalDate lastPaymentDate;
+
+    // Add helper method to get the correct start date for late fee calculation
+    public LocalDate getLateFeeStartDate() {
+        return lastPaymentDate != null ? lastPaymentDate : dueDate;
+    }
+
     @Column(name = "interest_amount", nullable = false)
     private BigDecimal interestAmount = BigDecimal.ZERO;
 

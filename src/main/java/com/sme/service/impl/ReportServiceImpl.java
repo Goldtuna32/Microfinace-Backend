@@ -14,6 +14,7 @@ import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -107,7 +108,8 @@ public class ReportServiceImpl implements ReportService {
 
 
     private List<AccountTransactionDTO> getTransactionData() {
-        List<AccountTransaction> transactions = transactionRepository.findAll();
+        // Fetch transactions sorted by transactionDate
+        List<AccountTransaction> transactions = transactionRepository.findAll(Sort.by(Sort.Direction.ASC, "transactionDate"));
         return transactions.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
@@ -125,19 +127,15 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public byte[] generateTransactionReport(String format) throws Exception {
-        // Load JRXML file from resources
         InputStream reportStream = getClass().getResourceAsStream("/reports/transaction_report.jrxml");
         JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
 
-        // Prepare data source
         List<AccountTransactionDTO> transactions = getTransactionData();
         JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(transactions);
 
-        // Fill report
         Map<String, Object> parameters = new HashMap<>();
         JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, dataSource);
 
-        // Export to desired format
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         if ("pdf".equalsIgnoreCase(format)) {
             JasperExportManager.exportReportToPdfStream(jasperPrint, outputStream);

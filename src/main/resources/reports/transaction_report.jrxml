@@ -12,14 +12,6 @@
     <field name="transactionDate" class="java.util.Date"/>
     <field name="currentAccountId" class="java.lang.Long"/>
 
-    <!-- Variables for Credit and Debit -->
-    <variable name="creditAmount" class="java.math.BigDecimal" calculation="Sum">
-        <variableExpression><![CDATA[$F{transactionType}.equals("CREDIT") ? $F{amount} : new java.math.BigDecimal("0")]]></variableExpression>
-    </variable>
-    <variable name="debitAmount" class="java.math.BigDecimal" calculation="Sum">
-        <variableExpression><![CDATA[$F{transactionType}.equals("DEBIT") ? $F{amount} : new java.math.BigDecimal("0")]]></variableExpression>
-    </variable>
-
     <!-- Title Section -->
     <title>
         <band height="50">
@@ -105,14 +97,14 @@
         </band>
     </detail>
 
-    <!-- Summary Section (Bar Chart for Credit/Debit) -->
+    <!-- Summary Section (Area Chart for Credit/Debit over Time) -->
     <summary>
         <band height="300">
-            <barChart>
+            <areaChart>
                 <chart>
                     <reportElement x="0" y="0" width="555" height="250"/>
                     <chartTitle>
-                        <titleExpression><![CDATA["Credit vs Debit Overview"]]></titleExpression>
+                        <titleExpression><![CDATA["Transaction Overview"]]></titleExpression>
                     </chartTitle>
                     <chartSubtitle/>
                     <chartLegend/>
@@ -120,22 +112,21 @@
                 <categoryDataset>
                     <categorySeries>
                         <seriesExpression><![CDATA["Credits"]]></seriesExpression>
-                        <categoryExpression><![CDATA["Total"]]></categoryExpression>
-                        <valueExpression><![CDATA[$V{creditAmount}]]></valueExpression>
+                        <categoryExpression><![CDATA[new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{transactionDate})]]></categoryExpression>
+                        <valueExpression><![CDATA[$F{transactionType}.equals("CREDIT") ? $F{amount} : new java.math.BigDecimal("0")]]></valueExpression>
                     </categorySeries>
                     <categorySeries>
                         <seriesExpression><![CDATA["Debits"]]></seriesExpression>
-                        <categoryExpression><![CDATA["Total"]]></categoryExpression>
-                        <valueExpression><![CDATA[$V{debitAmount}]]></valueExpression>
+                        <categoryExpression><![CDATA[new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{transactionDate})]]></categoryExpression>
+                        <valueExpression><![CDATA[$F{transactionType}.equals("DEBIT") ? $F{amount} : new java.math.BigDecimal("0")]]></valueExpression>
                     </categorySeries>
                 </categoryDataset>
-                <barPlot>
+                <areaPlot>
                     <plot/>
-                    <itemLabel/>
-                    <categoryAxisLabelExpression><![CDATA["Transaction Type"]]></categoryAxisLabelExpression>
+                    <categoryAxisLabelExpression><![CDATA["Date"]]></categoryAxisLabelExpression>
                     <valueAxisLabelExpression><![CDATA["Amount"]]></valueAxisLabelExpression>
-                </barPlot>
-            </barChart>
+                </areaPlot>
+            </areaChart>
         </band>
     </summary>
 

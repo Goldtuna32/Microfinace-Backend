@@ -1,6 +1,7 @@
 package com.sme.service.impl;
 
 import com.sme.dto.CurrentAccountDTO;
+import com.sme.entity.Collateral;
 import com.sme.entity.CurrentAccount;
 import com.sme.entity.CIF;
 import com.sme.repository.CurrentAccountRepository;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -63,8 +65,8 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         return account.map(this::convertToDTO);
     }
 
-    // ✅ Create a new Current Account with Min & Max Validation
     @Override
+    @Transactional
     public CurrentAccountDTO createCurrentAccount(CurrentAccountDTO accountDTO) {
         if (accountDTO.getCifId() == null) {
             throw new IllegalArgumentException("CIF ID must not be null.");
@@ -75,15 +77,60 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
 
         CurrentAccount account = new CurrentAccount();
         account.setCif(cif);
-        account.setBalance(accountDTO.getBalance());
+        account.setBalance(BigDecimal.ZERO);
         account.setMinimumBalance(accountDTO.getMinimumBalance());
         account.setMaximumBalance(accountDTO.getMaximumBalance());
         account.setStatus(accountDTO.getStatus());
         account.setDateCreated(new Date());
         account.setHoldAmount(BigDecimal.ZERO);
 
+        // Generate and set the account number
+        String accountNumber = generateAccountNumber(cif.getBranch().getBranchCode());
+        account.setAccountNumber(accountNumber);
+
         CurrentAccount savedAccount = currentAccountRepository.save(account);
         return convertToDTO(savedAccount);
+    }
+
+    @Transactional
+    public String generateAccountNumber(String branchCode) {
+        String lastAccountNumber = currentAccountRepository.findLastAccountNumberByBranchCode(branchCode);
+
+        if (lastAccountNumber == null || lastAccountNumber.isEmpty()) {
+            return "CA-" + branchCode + "-0001";
+        }
+
+        try {
+            String[] parts = lastAccountNumber.split("-");
+            if (parts.length != 4) {
+                throw new IllegalArgumentException("Invalid account number format: " + lastAccountNumber);
+            }
+
+            int lastNumber = Integer.parseInt(parts[3]);
+            int newNumber = lastNumber + 1;
+            return "CA-" + branchCode + "-" + String.format("%04d", newNumber);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error parsing account number: " + lastAccountNumber + ". Falling back to 0001.");
+            return "CA-" + branchCode + "-0001";
+        }
+    }
+
+    @Override
+    public CurrentAccountDTO updateCurrentAccount(Long id, CurrentAccountDTO accountDTO) {
+        CurrentAccount existingAccount = currentAccountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
+
+        // Only update maximumBalance and minimumBalance
+        existingAccount.setMaximumBalance(accountDTO.getMaximumBalance());
+        existingAccount.setMinimumBalance(accountDTO.getMinimumBalance());
+
+        // Validate that minimumBalance is not greater than maximumBalance
+        if (existingAccount.getMinimumBalance().compareTo(existingAccount.getMaximumBalance()) > 0) {
+            throw new IllegalArgumentException("Minimum balance cannot be greater than maximum balance.");
+        }
+
+        CurrentAccount updatedAccount = currentAccountRepository.save(existingAccount);
+        return convertToDTO(updatedAccount);
     }
 
     @Override
@@ -98,15 +145,38 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    @Override
+    public boolean softDeleteCurrentAccount(Long id) {
+        if (currentAccountRepository.existsById(id)) {
+            CurrentAccount currentAccount = currentAccountRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
+            currentAccount.setStatus(2);
+            currentAccountRepository.save(currentAccount);
+            return true;
+        }
+        return false;
+    }
+
+    @Transactional
+    @Override
+    public boolean restoreCurrentAccount(Long id) {
+        if (currentAccountRepository.existsById(id)) {
+            CurrentAccount currentAccount = currentAccountRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
+            currentAccount.setStatus(1); // Set status to 1 (active)
+            currentAccountRepository.save(currentAccount);
+            return true;
+        }
+        return false;
+    }
+
+
 
     public boolean hasCurrentAccount(Long cifId) {
         return currentAccountRepository.existsByCifId(cifId);
     }
-    // ✅ Delete a Current Account
-    @Override
-    public void deleteCurrentAccount(Long id) {
-        currentAccountRepository.deleteById(id);
-    }
+
     @Override
     public Page<CurrentAccountDTO> getAllCurrentAccountsPaginated(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());

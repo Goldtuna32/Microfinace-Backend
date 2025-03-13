@@ -47,6 +47,16 @@ public class CurrentAccountController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateCurrentAccount(@PathVariable Long id, @RequestBody CurrentAccountDTO accountDTO) {
+        try {
+            CurrentAccountDTO updatedAccount = currentAccountService.updateCurrentAccount(id, accountDTO);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/exists/{cifId}")
     public boolean hasCurrentAccount(@PathVariable Long cifId) {
         return currentAccountService.hasCurrentAccount(cifId);
@@ -55,7 +65,7 @@ public class CurrentAccountController {
     // ✅ Delete Current Account
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCurrentAccount(@PathVariable Long id) {
-        currentAccountService.deleteCurrentAccount(id);
+        currentAccountService.softDeleteCurrentAccount(id);
         return ResponseEntity.noContent().build();
     }
 

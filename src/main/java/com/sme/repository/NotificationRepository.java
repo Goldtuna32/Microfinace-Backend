@@ -10,10 +10,9 @@ import java.util.List;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-    List<Notification> findByAccountIdAndIsReadFalse(Long accountId);
+    List<Notification> findByAccountIdAndIsReadFalse(Long accountId); // Keep this for potential future use
+    List<Notification> findByIsReadFalse(); // New method to fetch all unread notifications
 
     boolean existsBySmeLoanAndCreatedAtBetween(SmeLoanRegistration smeLoan, LocalDateTime start, LocalDateTime end);
-
-    // Optional: Find notifications by loan and unread status
     List<Notification> findBySmeLoanIdAndIsReadFalse(Long smeLoanId);
 }

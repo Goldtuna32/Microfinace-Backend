@@ -40,6 +40,10 @@ public class AccountTransactionServiceImpl implements AccountTransactionService 
         CurrentAccount account = currentAccountRepository.findById(transactionDTO.getCurrentAccountId())
                 .orElseThrow(() -> new RuntimeException("Current Account not found"));
 
+        if (account.getStatus() == 2) {
+            throw new RuntimeException("Account is inactive");
+        }
+
         BigDecimal newBalance;
         BigDecimal currentBalance = account.getBalance();
         BigDecimal transactionAmount = transactionDTO.getAmount();

@@ -87,7 +87,7 @@
             <textField>
                 <reportElement x="340" y="0" width="60" height="20"/>
                 <textElement/>
-                <textFieldExpression><![CDATA[$F{status} == 1 ? "SUCCESS" : "FAILED"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{status} == 6 ? "SUCCESS" : "FAILED"]]></textFieldExpression>
             </textField>
             <textField pattern="MM/dd/yyyy hh:mm a">
                 <reportElement x="400" y="0" width="120" height="20"/>

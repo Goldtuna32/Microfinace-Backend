@@ -17,6 +17,9 @@ public interface CurrentAccountRepository extends JpaRepository<CurrentAccount, 
     @Query("SELECT ca FROM CurrentAccount ca WHERE ca.cif.id = :cifId")
     List<CurrentAccount> findByCifId(Long cifId);
 
+    @Query("SELECT ca.accountNumber FROM CurrentAccount ca WHERE ca.cif.branch.branchCode = :branchCode ORDER BY ca.accountNumber DESC LIMIT 1")
+    String findLastAccountNumberByBranchCode(String branchCode);
+
     @Query("SELECT ca FROM CurrentAccount ca WHERE ca.cif.serialNumber = :serialNumber")
     List<CurrentAccount> findByCifSerialNumber(String serialNumber);
 }

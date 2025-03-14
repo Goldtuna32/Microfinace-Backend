@@ -39,9 +39,15 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
             "OR (:today BETWEEN rs.dueDate AND rs.graceEndDate) " +
             "OR :today > rs.graceEndDate)")
     List<RepaymentSchedule> findSchedulesForProcessing(@Param("today") LocalDate today);
+
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.smeLoan.id = :loanId AND rs.interestOverDue > 0 ORDER BY rs.dueDate")
-        List<RepaymentSchedule> findOverdueSchedulesByLoanOrderByDueDate(@Param("loanId") Long loanId);
+    List<RepaymentSchedule> findOverdueSchedulesByLoanOrderByDueDate(@Param("loanId") Long loanId);
+
+    @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.smeLoan.id = :loanId ORDER BY rs.id")
+    List<RepaymentSchedule> findBySmeLoanOrderById(@Param("loanId") Long loanId);
 
     List<RepaymentSchedule> findBySmeLoan(SmeLoanRegistration loan);
+
     List<RepaymentSchedule> findBySmeLoanAndStatusNot(SmeLoanRegistration loan, int status);
+
 }

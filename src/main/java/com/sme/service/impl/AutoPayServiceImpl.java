@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
@@ -107,11 +108,69 @@ public class AutoPayServiceImpl implements AutoPaymentService {
     private void processPaymentsInOrder(List<RepaymentSchedule> schedules, CurrentAccount account,
             BigDecimal totalAvailable, boolean isOverdue) {
         BigDecimal remainingBalance = totalAvailable;
+        LocalDate today = LocalDate.now();
 
         // Sort all schedules by due date
         schedules.sort((a, b) -> a.getDueDate().compareTo(b.getDueDate()));
 
-        // Process late fees first, in order of due date
+        // Check for 90+ days late case first - using maximum late days
+        long maxLateDays = schedules.stream()
+                .filter(s -> s.getStatus() != 6)
+                .mapToLong(s -> {
+                    LocalDate startDate = s.getLastPaymentDate() != null ? s.getLastPaymentDate() : s.getDueDate();
+                    return ChronoUnit.DAYS.between(startDate, today);
+                })
+                .max()
+                .orElse(0);
+
+        List<RepaymentSchedule> lateSchedules = maxLateDays >= 90 ? schedules.stream()
+                .filter(s -> s.getStatus() != 6)
+                .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        if (!lateSchedules.isEmpty()) {
+            // Calculate one common late fee for all late terms
+            BigDecimal totalOutstanding = calculateTotalOutstanding(lateSchedules);
+            BigDecimal totalLateFee = calculate90DaysLateFee(lateSchedules.get(0).getSmeLoan(),
+                    totalOutstanding, 90);
+
+            // Check if we have enough money for total late fee
+            if (remainingBalance.compareTo(totalLateFee) >= 0) {
+                // Create single transaction for all late terms
+                RepaymentTransaction transaction = new RepaymentTransaction();
+                transaction.setPaymentDate(Timestamp.valueOf(LocalDateTime.now()));
+                transaction.setPaidLateFee(totalLateFee);
+                transaction.setPaidIOD(BigDecimal.ZERO);
+                transaction.setLateFeePaidDate(LocalDateTime.now());
+                transaction.setPaidPrincipal(BigDecimal.ZERO);
+                transaction.setPaidInterest(BigDecimal.ZERO);
+                transaction.setRemainingPrincipal(lateSchedules.get(0).getRemainingPrincipal());
+                transaction.setCurrentAccount(account);
+                transaction.setRepaymentSchedule(lateSchedules.get(0));
+                transaction.setStatus(1);
+                repaymentTransactionRepository.save(transaction);
+
+                // Update all late terms with same last payment date
+                for (RepaymentSchedule lateSchedule : lateSchedules) {
+                    lateSchedule.setLastPaymentDate(today);
+                    repaymentScheduleRepository.save(lateSchedule);
+                }
+
+                // Update account balance
+                remainingBalance = remainingBalance.subtract(totalLateFee);
+                account.setBalance(remainingBalance);
+            } else {
+                // Not enough for full payment - hold all available money
+                account.setHoldAmount(remainingBalance);
+                account.setBalance(BigDecimal.ZERO);
+                currentAccountRepository.save(account);
+                return; // Exit processing as all money is held
+            }
+        }
+
+        // Remove duplicate 90-day late case check block here
+
+        // Continue with normal processing for non-90-day cases
         for (RepaymentSchedule schedule : schedules) {
             if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
                 break;
@@ -121,9 +180,25 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 if (remainingBalance.compareTo(lateFee) >= 0) {
                     createLateFeeTransaction(schedule, account, lateFee, BigDecimal.ZERO);
                     remainingBalance = remainingBalance.subtract(lateFee);
-                    schedule.setLastPaymentDate(LocalDate.now());
-                    repaymentScheduleRepository.save(schedule);
+
+                    // Update all related schedules for 90+ days late fee
+                    long lateDays = ChronoUnit.DAYS.between(schedule.getLateFeeStartDate(), today);
+                    if (lateDays >= 90) {
+                        List<RepaymentSchedule> relatedSchedules = schedules.stream()
+                                .filter(s -> s.getId() <= schedule.getId() && s.getStatus() != 6)
+                                .collect(Collectors.toList());
+
+                        for (RepaymentSchedule relatedSchedule : relatedSchedules) {
+                            relatedSchedule.setLastPaymentDate(today);
+                            repaymentScheduleRepository.save(relatedSchedule);
+                        }
+                    } else {
+                        // Normal late fee - update only current schedule
+                        schedule.setLastPaymentDate(today);
+                        repaymentScheduleRepository.save(schedule);
+                    }
                 } else {
+                    // Insufficient payment - only move to hold, no transaction or date update
                     account.setHoldAmount(remainingBalance);
                     account.setBalance(BigDecimal.ZERO);
                     currentAccountRepository.save(account);
@@ -164,7 +239,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         // Process schedules in grace period
         if (remainingBalance.compareTo(BigDecimal.ZERO) > 0) {
-            LocalDate today = LocalDate.now();
+            // Removed duplicate today declaration
             for (RepaymentSchedule schedule : schedules) {
                 if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
                     break;
@@ -356,58 +431,35 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         }
 
         SmeLoanRegistration loan = schedule.getSmeLoan();
-        if (lateDays >= 90) {
-            // For 90+ days late, calculate total outstanding and use maximum late days
-            BigDecimal totalOutstanding = calculateTotalOutstanding(
-                    repaymentScheduleRepository.findBySmeLoan(loan).stream()
-                            .filter(s -> s.getStatus() != 6)
-                            .collect(Collectors.toList()));
+        // Check if any schedule is 90+ days late
+        List<RepaymentSchedule> allSchedules = repaymentScheduleRepository.findBySmeLoan(loan);
+        boolean has90DaysLate = allSchedules.stream()
+                .anyMatch(s -> ChronoUnit.DAYS.between(s.getDueDate(), today) >= 90);
 
-            BigDecimal lateFee = calculate90DaysLateFee(loan, totalOutstanding, lateDays);
+        if (has90DaysLate) {
+            // For 90+ days late, calculate one common late fee for all active schedules
+            List<RepaymentSchedule> activeSchedules = allSchedules.stream()
+                    .filter(s -> s.getStatus() != 6)
+                    .collect(Collectors.toList());
 
-            // Create a transaction for the 90+ days late fee
-            if (lateFee.compareTo(BigDecimal.ZERO) > 0) {
-                CurrentAccount account = loan.getCurrentAccount();
-                BigDecimal balance = account.getBalance();
-
-                if (balance.compareTo(lateFee) >= 0) {
-                    // Full payment of late fee
-                    createLateFeeTransaction(schedule, account, lateFee, BigDecimal.ZERO);
-                    account.setBalance(balance.subtract(lateFee));
-                    currentAccountRepository.save(account);
-
-                    // Update schedule
-                    schedule.setLastPaymentDate(LocalDate.now());
-                    repaymentScheduleRepository.save(schedule);
-                } else if (balance.compareTo(BigDecimal.ZERO) > 0) {
-                    // Partial payment of late fee
-                    createLateFeeTransaction(schedule, account, balance, BigDecimal.ZERO);
-                    account.setBalance(BigDecimal.ZERO);
-                    currentAccountRepository.save(account);
-
-                    // Update schedule
-                    schedule.setLastPaymentDate(LocalDate.now());
-                    repaymentScheduleRepository.save(schedule);
-                }
-            }
-
-            return lateFee;
-        } else {
-            // Original calculation for < 90 days remains the same
-            BigDecimal interestOverDue = schedule.getInterestOverDue();
-            BigDecimal annualRatePercentage = loan.getLate_fee_rate();
-
-            if (annualRatePercentage == null) {
-                annualRatePercentage = new BigDecimal("4.00"); // 4% default annual rate
-            }
-
-            BigDecimal dailyRate = annualRatePercentage
-                    .divide(new BigDecimal("100"))
-                    .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
-
-            BigDecimal lateFee = interestOverDue.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
-            return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal totalOutstanding = calculateTotalOutstanding(activeSchedules);
+            return calculate90DaysLateFee(loan, totalOutstanding, 90); // Use fixed 90 days
         }
+
+        // Regular late fee calculation for non-90-day cases
+        BigDecimal interestOverDue = schedule.getInterestOverDue();
+        BigDecimal annualRatePercentage = loan.getLate_fee_rate();
+
+        if (annualRatePercentage == null) {
+            annualRatePercentage = new BigDecimal("4.00"); // 4% default annual rate
+        }
+
+        BigDecimal dailyRate = annualRatePercentage
+                .divide(new BigDecimal("100"))
+                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
+
+        BigDecimal lateFee = interestOverDue.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
+        return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
     private void processAvailableLateFees(List<RepaymentSchedule> overdueSchedules,

@@ -143,6 +143,17 @@
             <version>6.20.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports-chart-themes</artifactId>
+            <version>6.20.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
         <!-- Apache POI for Excel Export -->
         <dependency>
             <groupId>org.apache.poi</groupId>

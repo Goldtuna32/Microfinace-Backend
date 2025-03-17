@@ -8,10 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -77,5 +74,25 @@ public class ReportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transaction_report." + fileExtension)
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
+    }
+
+    @GetMapping(value = "/cif/detail/{cifId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generateCIFDetailPdfReport(@PathVariable Long cifId) throws Exception {
+        byte[] reportBytes = reportService.generateCIFDetailReport(cifId, "pdf");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "cif_detail_report_" + cifId + ".pdf");
+        headers.setContentLength(reportBytes.length);
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/cif/detail/{cifId}/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generateCIFDetailExcelReport(@PathVariable Long cifId) throws Exception {
+        byte[] reportBytes = reportService.generateCIFDetailReport(cifId, "excel");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "cif_detail_report_" + cifId + ".xlsx");
+        headers.setContentLength(reportBytes.length);
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
     }
 }

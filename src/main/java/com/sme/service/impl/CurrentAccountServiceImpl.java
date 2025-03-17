@@ -116,6 +116,18 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
     }
 
     @Override
+    public CurrentAccountDTO getCurrentAccountByCifId(Long cifId) {
+        if (cifId == null) {
+            throw new IllegalArgumentException("CIF ID cannot be null");
+        }
+
+        CurrentAccount currentAccount = currentAccountRepository.findByCifId(cifId)
+                .orElseThrow(() -> new IllegalArgumentException("Current account not found for CIF ID: " + cifId));
+
+        return modelMapper.map(currentAccount, CurrentAccountDTO.class);
+    }
+
+    @Override
     public CurrentAccountDTO updateCurrentAccount(Long id, CurrentAccountDTO accountDTO) {
         CurrentAccount existingAccount = currentAccountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
@@ -133,17 +145,7 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         return convertToDTO(updatedAccount);
     }
 
-    @Override
-    public List<CurrentAccountDTO> getCurrentAccountsByCifId(Long cifId) {
-        List<CurrentAccount> accounts = currentAccountRepository.findByCifId(cifId);
-        return accounts.stream()
-                .map(account -> new CurrentAccountDTO(
-                        account.getId(),         // Long
-                        account.getAccountNumber(), // String
-                        account.getBalance().longValue()     // BigDecimal
-                ))
-                .collect(Collectors.toList());
-    }
+
 
     @Transactional
     @Override

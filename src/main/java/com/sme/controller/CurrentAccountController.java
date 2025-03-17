@@ -77,8 +77,8 @@ public class CurrentAccountController {
     }
 
     @GetMapping("/by-cif/{cifId}")
-    public List<CurrentAccountDTO> getCurrentAccountsByCifId(@PathVariable Long cifId) {
-        return currentAccountService.getCurrentAccountsByCifId(cifId);
+    public CurrentAccountDTO getCurrentAccountsByCifId(@PathVariable Long cifId) {
+        return currentAccountService.getCurrentAccountByCifId(cifId);
     }
 
     @GetMapping("/serial/{serialNumber}")

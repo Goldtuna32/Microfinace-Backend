@@ -24,10 +24,10 @@ public interface CurrentAccountService {
 
     boolean hasCurrentAccount(Long id);
 
-    List<CurrentAccountDTO> getCurrentAccountsByCifId(Long cifId);
+//    CurrentAccountDTO getCurrentAccountsByCifId(Long cifId);
 
     Page<CurrentAccountDTO> getAllCurrentAccountsPaginated(int page, int size);
 
-
+    CurrentAccountDTO getCurrentAccountByCifId(Long cifId);
 
 }

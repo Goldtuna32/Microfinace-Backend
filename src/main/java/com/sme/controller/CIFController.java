@@ -1,6 +1,7 @@
 package com.sme.controller;
 
 import com.sme.dto.CIFDTO;
+import com.sme.repository.CIFRepository;
 import com.sme.service.CIFService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,6 +26,9 @@ public class CIFController {
     @Autowired
     private CIFService cifService;
 
+    @Autowired
+    private CIFRepository cifRepository;
+
     @GetMapping("/active")
     public ResponseEntity<Page<CIFDTO>> getAllCIFs(
             @RequestParam(defaultValue = "0") int page,
@@ -35,6 +37,21 @@ public class CIFController {
         Pageable pageable = PageRequest.of(page, size);
         Page<CIFDTO> cifPage = cifService.getAllCIFs(pageable, nrcPrefix);
         return ResponseEntity.ok(cifPage);
+    }
+
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Map<String, Boolean>> checkDuplicate(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String nrcNumber,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String email) {
+        boolean isDuplicate = cifRepository.existsByName(name) ||
+                cifRepository.existsByNrcNumber(nrcNumber) ||
+                cifRepository.existsByPhoneNumber(phoneNumber) ||
+                cifRepository.existsByEmail(email);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isDuplicate", isDuplicate);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/deleted")

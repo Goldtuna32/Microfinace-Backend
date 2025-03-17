@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD Report Design//EN"
+        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="CIFDetailReport" pageWidth="595" pageHeight="842" columnWidth="535"
+              leftMargin="30" rightMargin="30" topMargin="20" bottomMargin="20">
+
+    <property name="net.sf.jasperreports.export.xls.create.custom.palette" value="true"/>
+    <property name="net.sf.jasperreports.export.xls.one.page.per.sheet" value="false"/>
+
+    <!-- Parameters -->
+    <parameter name="REPORT_TITLE" class="java.lang.String"/>
+    <parameter name="CREATED_DATE" class="java.time.LocalDateTime">
+        <defaultValueExpression><![CDATA[java.time.LocalDateTime.now()]]></defaultValueExpression>
+    </parameter>
+    <parameter name="TRANSACTION_SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="COLLATERAL_SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
+
+    <!-- Fields -->
+    <field name="name" class="java.lang.String"/>
+    <field name="nrcNumber" class="java.lang.String"/>
+    <field name="dob" class="java.time.LocalDate"/>
+    <field name="gender" class="java.lang.String"/>
+    <field name="phoneNumber" class="java.lang.String"/>
+    <field name="email" class="java.lang.String"/>
+    <field name="address" class="java.lang.String"/>
+    <field name="maritalStatus" class="java.lang.String"/>
+    <field name="occupation" class="java.lang.String"/>
+    <field name="incomeSource" class="java.lang.String"/>
+    <field name="serialNumber" class="java.lang.String"/>
+    <field name="createdAt" class="java.time.LocalDateTime"/>
+    <field name="branchId" class="java.lang.Long"/>
+    <field name="hasCurrentAccount" class="java.lang.Boolean"/>
+    <field name="fNrcPhotoUrl" class="java.lang.String"/>
+    <field name="bNrcPhotoUrl" class="java.lang.String"/>
+    <field name="currentAccount" class="com.sme.dto.CurrentAccountDTO"/>
+    <field name="transactions" class="java.util.List"/>
+    <field name="collaterals" class="java.util.List"/>
+
+    <!-- Variables -->
+    <variable name="transactionCount" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[$F{transactions} != null ? $F{transactions}.size() : 0]]></variableExpression>
+    </variable>
+    <variable name="collateralCount" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[$F{collaterals} != null ? $F{collaterals}.size() : 0]]></variableExpression>
+    </variable>
+
+    <!-- Title Band -->
+    <title>
+        <band height="60">
+            <staticText>
+                <reportElement x="0" y="0" width="535" height="30" forecolor="#1E3A8A"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <text><![CDATA[$P{REPORT_TITLE}]]></text>
+            </staticText>
+            <textField pattern="yyyy-MM-dd HH:mm:ss">
+                <reportElement x="0" y="30" width="535" height="20" forecolor="#4B5EAA"/>
+                <textElement textAlignment="Center">
+                    <font size="10" isItalic="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Created on: " + $P{CREATED_DATE}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- Detail Band -->
+    <detail>
+        <band height="750" splitType="Stretch">
+            <!-- CIF Details Section -->
+            <staticText>
+                <reportElement x="0" y="0" width="535" height="30" backcolor="#E6E6E6" forecolor="#1E3A8A"/>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[CIF Details]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="10" y="40" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Serial Number: " + $F{serialNumber}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="60" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Name: " + $F{name}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="80" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["NRC Number: " + $F{nrcNumber}]]></textFieldExpression>
+            </textField>
+            <textField pattern="yyyy-MM-dd">
+                <reportElement x="10" y="100" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["DOB: " + $F{dob}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="120" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Gender: " + $F{gender}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="140" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Phone: " + $F{phoneNumber}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="160" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Email: " + $F{email}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="180" width="515" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Address: " + $F{address}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="200" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Marital Status: " + $F{maritalStatus}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="220" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Occupation: " + $F{occupation}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="240" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Income Source: " + $F{incomeSource}]]></textFieldExpression>
+            </textField>
+            <textField pattern="yyyy-MM-dd HH:mm:ss">
+                <reportElement x="10" y="260" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Created At: " + $F{createdAt}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="280" width="250" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Branch ID: " + $F{branchId}]]></textFieldExpression>
+            </textField>
+
+            <!-- NRC Photos -->
+            <image hAlign="Center" vAlign="Middle">
+                <reportElement x="300" y="40" width="100" height="100"/>
+                <imageExpression><![CDATA[$F{fNrcPhotoUrl}]]></imageExpression>
+            </image>
+            <image hAlign="Center" vAlign="Middle">
+                <reportElement x="420" y="40" width="100" height="100"/>
+                <imageExpression><![CDATA[$F{bNrcPhotoUrl}]]></imageExpression>
+            </image>
+            <staticText>
+                <reportElement x="300" y="140" width="100" height="20" forecolor="#4B5EAA"/>
+                <textElement textAlignment="Center"><font size="8"/></textElement>
+                <text><![CDATA[Front NRC]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="420" y="140" width="100" height="20" forecolor="#4B5EAA"/>
+                <textElement textAlignment="Center"><font size="8"/></textElement>
+                <text><![CDATA[Back NRC]]></text>
+            </staticText>
+
+            <!-- Current Account Section -->
+            <staticText>
+                <reportElement x="0" y="310" width="535" height="30" backcolor="#E6E6E6" forecolor="#1E3A8A">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Current Account Details]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="10" y="350" width="250" height="20">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Account Number: " + ($F{currentAccount} != null ? $F{currentAccount}.getAccountNumber() : "N/A")]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="370" width="250" height="20">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Balance: " + ($F{currentAccount} != null ? $F{currentAccount}.getBalance() : "N/A")]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="390" width="250" height="20">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Maximum Balance: " + ($F{currentAccount} != null ? $F{currentAccount}.getMaximumBalance() : "N/A")]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="410" width="250" height="20">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Minimum Balance: " + ($F{currentAccount} != null ? $F{currentAccount}.getMinimumBalance() : "N/A")]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="10" y="430" width="250" height="20">
+                    <printWhenExpression><![CDATA[$F{hasCurrentAccount}]]></printWhenExpression>
+                </reportElement>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA["Status: " + ($F{currentAccount} != null ? $F{currentAccount}.getStatus() : "N/A")]]></textFieldExpression>
+            </textField>
+
+            <!-- Transaction History Subreport -->
+            <subreport>
+                <reportElement x="0" y="460" width="535" height="200"/>
+                <subreportParameter name="TRANSACTION_LIST">
+                    <subreportParameterExpression><![CDATA[$F{transactions}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="SUMMARIZED_TRANSACTIONS">
+                    <subreportParameterExpression><![CDATA[$F{transactions}]]></subreportParameterExpression> <!-- Temporarily using transactions; will adjust in subreport -->
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{transactions})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{TRANSACTION_SUBREPORT}]]></subreportExpression>
+            </subreport>
+
+            <!-- Collaterals Subreport -->
+            <subreport>
+                <reportElement x="0" y="660" width="535" height="80" isPrintWhenDetailOverflows="true">
+                    <printWhenExpression><![CDATA[$F{collaterals} != null && !$F{collaterals}.isEmpty()]]></printWhenExpression>
+                </reportElement>
+                <subreportParameter name="COLLATERAL_LIST">
+                    <subreportParameterExpression><![CDATA[$F{collaterals}]]></subreportParameterExpression>
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{collaterals})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{COLLATERAL_SUBREPORT}]]></subreportExpression>
+            </subreport>
+        </band>
+    </detail>
+
+    <!-- Page Footer -->
+    <pageFooter>
+        <band height="30">
+            <textField>
+                <reportElement x="480" y="0" width="55" height="30" forecolor="#4B5EAA"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+</jasperReport>

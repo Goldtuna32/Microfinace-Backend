@@ -150,9 +150,13 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 transaction.setStatus(1);
                 repaymentTransactionRepository.save(transaction);
 
-                // Update all late terms with same last payment date
+                // Update only schedules that have IOD and are being paid
                 for (RepaymentSchedule lateSchedule : lateSchedules) {
-                    lateSchedule.setLastPaymentDate(today);
+                    // Only update last payment date if schedule has IOD
+                    if (lateSchedule.getInterestOverDue().compareTo(BigDecimal.ZERO) > 0) {
+                        lateSchedule.setLastPaymentDate(today);
+
+                    }
                     repaymentScheduleRepository.save(lateSchedule);
                 }
 
@@ -222,7 +226,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
                     // Set status to 6 if IOD is cleared and no other payments pending
                     if (schedule.getInterestAmount().compareTo(BigDecimal.ZERO) == 0
-                            && schedule.getPrincipalAmount().compareTo(BigDecimal.ZERO) == 0) {
+                            && schedule.getInterestOverDue().compareTo(BigDecimal.ZERO) == 0) {
                         schedule.setStatus(6);
                     }
                     repaymentScheduleRepository.save(schedule);

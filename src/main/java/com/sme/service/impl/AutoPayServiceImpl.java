@@ -91,17 +91,34 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             BigDecimal holdAmount = account.getHoldAmount() != null ? account.getHoldAmount() : BigDecimal.ZERO;
             BigDecimal totalAvailable = balance.add(holdAmount);
 
-            // Skip all processing if no balance
-            if (totalAvailable.compareTo(BigDecimal.ZERO) <= 0) {
-                System.out.println("Skipping all processing: No balance available");
-                continue;
-            }
-
-            // Get all overdue schedules ordered by ID
+            // Get all overdue schedules ordered by ID first
             List<RepaymentSchedule> allSchedules = repaymentScheduleRepository
                     .findBySmeLoanOrderById(loan.getId());
+            LocalDate today = LocalDate.now();
 
-            processPaymentsInOrder(allSchedules, account, totalAvailable, isOverdue);
+            // Handle grace end date cases even when no balance available
+            if (totalAvailable.compareTo(BigDecimal.ZERO) <= 0) {
+                System.out.println("No balance available - Checking for grace end date cases");
+
+                // Check if any schedule needs interest to IOD movement
+                for (RepaymentSchedule schedule : allSchedules) {
+                    if (today.isEqual(schedule.getGraceEndDate())
+                            && schedule.getInterestAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        // Move interest to IOD only if there's actual interest to move
+                        BigDecimal interest = schedule.getInterestAmount();
+                        schedule.setInterestOverDue(schedule.getInterestOverDue().add(interest));
+                        schedule.setInterestAmount(BigDecimal.ZERO);
+                        repaymentScheduleRepository.save(schedule);
+                        System.out.println("Moved interest " + interest + " to IOD for schedule " + schedule.getId());
+                    }
+                }
+                continue;
+            }
+            List<RepaymentSchedule> activeSchedules = allSchedules.stream()
+                    .filter(s -> s.getStatus() != 6)
+                    .collect(Collectors.toList());
+
+            processPaymentsInOrder(activeSchedules, account, totalAvailable, isOverdue);
         }
     }
 
@@ -243,7 +260,6 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         // Process schedules in grace period
         if (remainingBalance.compareTo(BigDecimal.ZERO) > 0) {
-            // Removed duplicate today declaration
             for (RepaymentSchedule schedule : schedules) {
                 if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
                     break;
@@ -252,6 +268,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 if (today.isAfter(schedule.getDueDate()) && today.isBefore(schedule.getGraceEndDate())
                         || today.isEqual(schedule.getGraceEndDate())) {
                     processIndividualSchedule(schedule, account, isOverdue);
+                    remainingBalance = account.getBalance(); // Update remainingBalance after processing
                 }
             }
         }
@@ -262,8 +279,10 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         currentAccountRepository.save(account);
     }
 
+    @Transactional
     private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, boolean isOverdue) {
         System.out.println("\n=== Processing Schedule ID: " + schedule.getId() + " ===");
+        System.out.println("Initial account balance: " + account.getBalance());
 
         LocalDate today = LocalDate.now();
         LocalDate startDate = schedule.getLateFeeStartDate();
@@ -301,88 +320,65 @@ public class AutoPayServiceImpl implements AutoPaymentService {
 
         // Remove duplicate account declaration and use the one passed as parameter
         BigDecimal balance = account.getBalance();
-        BigDecimal holdAmount = account.getHoldAmount() != null ? account.getHoldAmount() : BigDecimal.ZERO;
 
-        // Remove the duplicate late fee calculation block
-        // The late fees are now handled in processLateFees method
-        if (schedule.getInterestOverDue().compareTo(BigDecimal.ZERO) > 0) {
-            // Skip late fee processing here as it's already handled in processLateFees
-            return;
-        }
-
-        // Continue with normal processing
-        System.out.println("Processing during grace period - Day: " + today);
-        System.out.println("Current Balance: " + balance);
-        System.out.println("Required Interest: " + schedule.getInterestAmount());
-
-        // If it's grace end date and insufficient balance, move to IOD
-        if (today.isEqual(graceEndDate) && balance.compareTo(schedule.getInterestAmount()) < 0) {
-            BigDecimal currentInterest = schedule.getInterestAmount();
-            BigDecimal paidInterest = balance; // Use whatever balance is available
-            BigDecimal remainingInterest = currentInterest.subtract(paidInterest);
-
-            // Create transaction for the partial payment
-            RepaymentTransaction transaction = new RepaymentTransaction();
-            transaction.setPaymentDate(Timestamp.valueOf(LocalDateTime.now()));
-            transaction.setPaidPrincipal(BigDecimal.ZERO);
-            transaction.setPaidInterest(paidInterest);
-            transaction.setPaidLateFee(BigDecimal.ZERO);
-            transaction.setPaidIOD(BigDecimal.ZERO);
-            transaction.setRemainingPrincipal(schedule.getRemainingPrincipal());
-            transaction.setCurrentAccount(account);
-            transaction.setRepaymentSchedule(schedule);
-            transaction.setStatus(1); // Partial payment
-            repaymentTransactionRepository.save(transaction);
-
-            // Update account balance to zero
-            account.setBalance(BigDecimal.ZERO);
-            currentAccountRepository.save(account);
-
-            // Move remaining interest to IOD
-            schedule.setInterestOverDue(schedule.getInterestOverDue().add(remainingInterest));
-            schedule.setInterestAmount(BigDecimal.ZERO);
-            repaymentScheduleRepository.save(schedule);
-
-            System.out.println("Grace period ended - Partial payment: " + paidInterest);
-            System.out.println("Moving remaining interest to IOD: " + remainingInterest);
-            return; // Changed from continue to return since we're in a method
-        }
+        // Declare required payment variables
+        BigDecimal requiredLateFee = calculateLateFee(schedule);
         BigDecimal requiredInterest = schedule.getInterestAmount();
         BigDecimal requiredPrincipal = schedule.getPrincipalAmount();
-        BigDecimal requiredLateFee = calculateLateFee(schedule);
-        BigDecimal paidInterest = BigDecimal.ZERO;
-        BigDecimal paidPrincipal = BigDecimal.ZERO;
+
+        // Declare payment tracking variables
         BigDecimal paidLateFee = BigDecimal.ZERO;
         BigDecimal paidIOD = BigDecimal.ZERO;
+        BigDecimal paidInterest = BigDecimal.ZERO;
+        BigDecimal paidPrincipal = BigDecimal.ZERO;
 
-        // Deduct Late Fee First (If applicable)
+        // 1. Late Fee
         if (isOverdue && balance.compareTo(requiredLateFee) >= 0) {
             paidLateFee = requiredLateFee;
             balance = balance.subtract(paidLateFee);
         }
 
-        // Deduct Interest First
-        if (balance.compareTo(requiredInterest) >= 0) {
-            paidInterest = requiredInterest;
-            balance = balance.subtract(paidInterest);
-            schedule.setInterestAmount(BigDecimal.ZERO); // Full interest paid
-        } else {
-            paidIOD = requiredInterest.subtract(balance);
-            paidInterest = balance;
-            balance = BigDecimal.ZERO;
-            // Update remaining interest amount
-            schedule.setInterestAmount(requiredInterest.subtract(paidInterest));
+        // 2. IOD (Interest Over Due)
+        BigDecimal iod = schedule.getInterestOverDue();
+        if (iod.compareTo(BigDecimal.ZERO) > 0 && balance.compareTo(BigDecimal.ZERO) > 0) {
+            if (balance.compareTo(iod) >= 0) {
+                paidIOD = iod;
+                balance = balance.subtract(iod);
+                schedule.setInterestOverDue(BigDecimal.ZERO);
+            } else {
+                paidIOD = balance;
+                schedule.setInterestOverDue(iod.subtract(balance));
+                balance = BigDecimal.ZERO;
+            }
         }
 
-        // Deduct Principal Next
-        if (balance.compareTo(requiredPrincipal) >= 0) {
-            paidPrincipal = requiredPrincipal;
-            balance = balance.subtract(paidPrincipal);
+        // 3. Interest
+        if (balance.compareTo(BigDecimal.ZERO) > 0) {
+            if (balance.compareTo(requiredInterest) >= 0) {
+                paidInterest = requiredInterest;
+                balance = balance.subtract(paidInterest);
+                schedule.setInterestAmount(BigDecimal.ZERO);
+            } else {
+                paidInterest = balance;
+                schedule.setInterestAmount(requiredInterest.subtract(balance));
+                balance = BigDecimal.ZERO;
+            }
         }
 
-        // Update account balance
+        // 4. Principal
+        if (balance.compareTo(BigDecimal.ZERO) > 0) {
+            if (balance.compareTo(requiredPrincipal) >= 0) {
+                paidPrincipal = requiredPrincipal;
+                balance = balance.subtract(paidPrincipal);
+            }
+        }
+
+        // Update account balance and save immediately
         account.setBalance(balance);
-        currentAccountRepository.save(account);
+        System.out.println("Current account balance after processing: " + balance);
+        CurrentAccount savedAccount = currentAccountRepository.save(account);
+        currentAccountRepository.flush(); // Force immediate flush to database
+        System.out.println("Saved account balance in database: " + savedAccount.getBalance());
 
         // Only create transaction if any payment was made (including IOD)
         if (paidPrincipal.compareTo(BigDecimal.ZERO) > 0

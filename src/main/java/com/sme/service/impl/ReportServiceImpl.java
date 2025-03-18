@@ -174,10 +174,13 @@ public class ReportServiceImpl implements ReportService {
         JasperReport collateralSubreport = compileSubreport("/reports/collateral_subreport.jrxml");
         JasperReport transactionSubreport = compileSubreport("/reports/transaction_subreport.jrxml");
 
-        // Pass compiled subreports as parameters
+        // Pass compiled subreports and lists as parameters
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("REPORT_TITLE", "CIF Detail Report - " + cif.getSerialNumber());
         parameters.put("CREATED_DATE", LocalDateTime.now());
+        parameters.put("TRANSACTION_LIST", transactions); // Set TRANSACTION_LIST
+        parameters.put("COLLATERAL_LIST", collaterals);   // Set COLLATERAL_LIST
+
         if (collateralSubreport != null) {
             parameters.put("COLLATERAL_SUBREPORT", collateralSubreport);
             System.out.println("Collateral Subreport: " + collateralSubreport);
@@ -190,6 +193,9 @@ public class ReportServiceImpl implements ReportService {
         } else {
             System.out.println("Transaction Subreport is null");
         }
+
+        System.out.println("Transactions: " + transactions);
+        System.out.println("Collaterals: " + collaterals);
 
         // Fill the report
         System.out.println("Filling report...");

@@ -17,6 +17,8 @@
     </parameter>
     <parameter name="TRANSACTION_SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
     <parameter name="COLLATERAL_SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="TRANSACTION_LIST" class="java.util.List"/>
+    <parameter name="COLLATERAL_LIST" class="java.util.List"/>
 
     <!-- Fields -->
     <field name="name" class="java.lang.String"/>
@@ -47,6 +49,33 @@
         <variableExpression><![CDATA[$F{collaterals} != null ? $F{collaterals}.size() : 0]]></variableExpression>
     </variable>
 
+    <!-- Group for Subreports -->
+    <group name="SubreportGroup">
+        <groupExpression><![CDATA[true]]></groupExpression>
+        <groupHeader>
+            <band height="330" splitType="Stretch">
+                <!-- Transaction Subreport -->
+                <subreport>
+                    <reportElement x="0" y="0" width="535" height="200"/>
+                    <subreportParameter name="TRANSACTION_LIST">
+                        <subreportParameterExpression><![CDATA[$F{transactions}]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{TRANSACTION_LIST})]]></dataSourceExpression>
+                    <subreportExpression><![CDATA[$P{TRANSACTION_SUBREPORT}]]></subreportExpression>
+                </subreport>
+                <!-- Collateral Subreport -->
+                <subreport>
+                    <reportElement x="0" y="200" width="535" height="130"/>
+                    <subreportParameter name="COLLATERAL_LIST">
+                        <subreportParameterExpression><![CDATA[$F{collaterals}]]></subreportParameterExpression>
+                    </subreportParameter>
+                    <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{COLLATERAL_LIST})]]></dataSourceExpression>
+                    <subreportExpression><![CDATA[$P{COLLATERAL_SUBREPORT}]]></subreportExpression>
+                </subreport>
+            </band>
+        </groupHeader>
+    </group>
+
     <!-- Title Band -->
     <title>
         <band height="60">
@@ -69,7 +98,7 @@
 
     <!-- Detail Band -->
     <detail>
-        <band height="750" splitType="Stretch">
+        <band height="460" splitType="Stretch">
             <!-- CIF Details Section -->
             <staticText>
                 <reportElement x="0" y="0" width="535" height="30" backcolor="#E6E6E6" forecolor="#1E3A8A"/>
@@ -209,31 +238,6 @@
                 <textElement><font size="10"/></textElement>
                 <textFieldExpression><![CDATA["Status: " + ($F{currentAccount} != null ? $F{currentAccount}.getStatus() : "N/A")]]></textFieldExpression>
             </textField>
-
-            <!-- Transaction History Subreport -->
-            <subreport>
-                <reportElement x="0" y="460" width="535" height="200"/>
-                <subreportParameter name="TRANSACTION_LIST">
-                    <subreportParameterExpression><![CDATA[$F{transactions}]]></subreportParameterExpression>
-                </subreportParameter>
-                <subreportParameter name="SUMMARIZED_TRANSACTIONS">
-                    <subreportParameterExpression><![CDATA[$F{transactions}]]></subreportParameterExpression> <!-- Temporarily using transactions; will adjust in subreport -->
-                </subreportParameter>
-                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{transactions})]]></dataSourceExpression>
-                <subreportExpression><![CDATA[$P{TRANSACTION_SUBREPORT}]]></subreportExpression>
-            </subreport>
-
-            <!-- Collaterals Subreport -->
-            <subreport>
-                <reportElement x="0" y="660" width="535" height="80" isPrintWhenDetailOverflows="true">
-                    <printWhenExpression><![CDATA[$F{collaterals} != null && !$F{collaterals}.isEmpty()]]></printWhenExpression>
-                </reportElement>
-                <subreportParameter name="COLLATERAL_LIST">
-                    <subreportParameterExpression><![CDATA[$F{collaterals}]]></subreportParameterExpression>
-                </subreportParameter>
-                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{collaterals})]]></dataSourceExpression>
-                <subreportExpression><![CDATA[$P{COLLATERAL_SUBREPORT}]]></subreportExpression>
-            </subreport>
         </band>
     </detail>
 

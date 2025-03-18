@@ -1,5 +1,7 @@
 package com.sme.security;
 
+import com.sme.entity.CustomUserDetails;
+import com.sme.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -22,9 +24,15 @@ public class JwtUtil {
     private static final long REFRESH_EXPIRATION_TIME =  60 * 1000;
 
     public String generateToken(UserDetails userDetails) {
+        CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+        User user = customUserDetails.getUser();
+
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername(), EXPIRATION_TIME);
+        claims.put("role", user.getRole().getName());
+
+        return createToken(claims, user.getEmail(), EXPIRATION_TIME);
     }
+
 
     public String generateRefreshToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();

@@ -19,7 +19,7 @@ public class JwtUtil {
 
     private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long EXPIRATION_TIME = 60 * 1000;
-    private static final long REFRESH_EXPIRATION_TIME =  60 * 1000;
+    private static final long REFRESH_EXPIRATION_TIME =  120 * 1000;
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
@@ -50,11 +50,9 @@ public class JwtUtil {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
-        System.out.println("Extracted Email from Token: " + email);
-        System.out.println("UserDetails Username: " + userDetails.getUsername());
-
         return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
 
 
     public String extractEmail(String token) {

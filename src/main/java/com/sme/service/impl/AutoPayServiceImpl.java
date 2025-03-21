@@ -65,9 +65,10 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         List<RepaymentSchedule> schedulesToProcess = repaymentScheduleRepository.findSchedulesForProcessing(today);
 
         // Process all schedules at once instead of individually
-        boolean isOverdue = false;
+        
         if (!schedulesToProcess.isEmpty()) {
-            isOverdue = today.isAfter(schedulesToProcess.get(0).getGraceEndDate());
+            boolean isOverdue = schedulesToProcess.stream()
+                    .anyMatch(schedule -> today.isAfter(schedule.getDueDate()));
             processSchedules(schedulesToProcess, isOverdue);
         }
     }
@@ -166,6 +167,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 transaction.setRepaymentSchedule(lateSchedules.get(0));
                 transaction.setStatus(1);
                 repaymentTransactionRepository.save(transaction);
+                System.out.println("90 day late fee ");
 
                 // Update only schedules that have IOD and are being paid
                 for (RepaymentSchedule lateSchedule : lateSchedules) {
@@ -189,88 +191,14 @@ public class AutoPayServiceImpl implements AutoPaymentService {
             }
         }
 
-        // Remove duplicate 90-day late case check block here
-
-        // Continue with normal processing for non-90-day cases
+        // Process schedules in order
         for (RepaymentSchedule schedule : schedules) {
             if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
                 break;
 
-            BigDecimal lateFee = calculateLateFee(schedule);
-            if (lateFee.compareTo(BigDecimal.ZERO) > 0) {
-                if (remainingBalance.compareTo(lateFee) >= 0) {
-                    createLateFeeTransaction(schedule, account, lateFee, BigDecimal.ZERO);
-                    remainingBalance = remainingBalance.subtract(lateFee);
-
-                    // Update all related schedules for 90+ days late fee
-                    long lateDays = ChronoUnit.DAYS.between(schedule.getLateFeeStartDate(), today);
-                    if (lateDays >= 90) {
-                        List<RepaymentSchedule> relatedSchedules = schedules.stream()
-                                .filter(s -> s.getId() <= schedule.getId() && s.getStatus() != 6)
-                                .collect(Collectors.toList());
-
-                        for (RepaymentSchedule relatedSchedule : relatedSchedules) {
-                            relatedSchedule.setLastPaymentDate(today);
-                            repaymentScheduleRepository.save(relatedSchedule);
-                        }
-                    } else {
-                        // Normal late fee - update only current schedule
-                        schedule.setLastPaymentDate(today);
-                        repaymentScheduleRepository.save(schedule);
-                    }
-                } else {
-                    // Insufficient payment - only move to hold, no transaction or date update
-                    account.setHoldAmount(remainingBalance);
-                    account.setBalance(BigDecimal.ZERO);
-                    currentAccountRepository.save(account);
-                    return;
-                }
-            }
-        }
-
-        // Process IODs next
-        for (RepaymentSchedule schedule : schedules) {
-            if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
-                break;
-
-            BigDecimal iod = schedule.getInterestOverDue();
-            if (iod.compareTo(BigDecimal.ZERO) > 0) {
-                if (remainingBalance.compareTo(iod) >= 0) {
-                    createLateFeeTransaction(schedule, account, BigDecimal.ZERO, iod);
-                    remainingBalance = remainingBalance.subtract(iod);
-                    schedule.setInterestOverDue(BigDecimal.ZERO);
-                    schedule.setLastPaymentDate(LocalDate.now());
-
-                    // Set status to 6 if IOD is cleared and no other payments pending
-                    if (schedule.getInterestAmount().compareTo(BigDecimal.ZERO) == 0
-                            && schedule.getInterestOverDue().compareTo(BigDecimal.ZERO) == 0) {
-                        schedule.setStatus(6);
-                    }
-                    repaymentScheduleRepository.save(schedule);
-                } else {
-                    createLateFeeTransaction(schedule, account, BigDecimal.ZERO, remainingBalance);
-                    schedule.setInterestOverDue(iod.subtract(remainingBalance));
-                    schedule.setLastPaymentDate(LocalDate.now());
-                    remainingBalance = BigDecimal.ZERO;
-                    repaymentScheduleRepository.save(schedule);
-                    break;
-                }
-            }
-        }
-
-        // Process schedules in grace period
-        if (remainingBalance.compareTo(BigDecimal.ZERO) > 0) {
-            for (RepaymentSchedule schedule : schedules) {
-                if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
-                    break;
-
-                // Check if schedule is in grace period
-                if (today.isAfter(schedule.getDueDate()) && today.isBefore(schedule.getGraceEndDate())
-                        || today.isEqual(schedule.getGraceEndDate())) {
-                    processIndividualSchedule(schedule, account, isOverdue);
-                    remainingBalance = account.getBalance(); // Update remainingBalance after processing
-                }
-            }
+            // Process individual schedule (handles late fees, IOD, interest, and principal)
+            processIndividualSchedule(schedule, account, isOverdue);
+            remainingBalance = account.getBalance(); // Update remainingBalance after processing
         }
 
         // Update final account balance
@@ -279,7 +207,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         currentAccountRepository.save(account);
     }
 
-    @Transactional
+    
     private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, boolean isOverdue) {
         System.out.println("\n=== Processing Schedule ID: " + schedule.getId() + " ===");
         System.out.println("Initial account balance: " + account.getBalance());
@@ -332,10 +260,13 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         BigDecimal paidInterest = BigDecimal.ZERO;
         BigDecimal paidPrincipal = BigDecimal.ZERO;
 
+        System.out.println("IS OVERDUE CHECK: " + isOverdue);
+
         // 1. Late Fee
         if (isOverdue && balance.compareTo(requiredLateFee) >= 0) {
             paidLateFee = requiredLateFee;
             balance = balance.subtract(paidLateFee);
+            System.out.println("Late fee payment: " + paidLateFee);
         }
 
         // 2. IOD (Interest Over Due)
@@ -350,6 +281,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
                 schedule.setInterestOverDue(iod.subtract(balance));
                 balance = BigDecimal.ZERO;
             }
+            System.out.println("Payment of IOD: " + paidIOD);
         }
 
         // 3. Interest
@@ -437,9 +369,28 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         LocalDate startDate = schedule.getLateFeeStartDate();
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
 
-        if (lateDays <= 0) {
-            return BigDecimal.ZERO;
+        if (lateDays > 0) {
+            BigDecimal interestOverDue = schedule.getInterestOverDue();
+            BigDecimal ratePercentage = schedule.getSmeLoan().getLate_fee_rate();
+            
+            if (ratePercentage == null) {
+                ratePercentage = new BigDecimal("4.00"); // 4% default rate
+            }
+
+            BigDecimal rate = ratePercentage.divide(new BigDecimal("100"));
+
+            System.out.println("Late days: " + lateDays);
+            System.out.println("IOD amount: " + interestOverDue);
+            System.out.println("Rate (%): " + ratePercentage);
+            System.out.println("Rate (decimal): " + rate);
+
+            return interestOverDue.multiply(rate).multiply(BigDecimal.valueOf(lateDays));
+            
         }
+
+        // if (lateDays <= 0 ) {
+        //     return BigDecimal.ZERO;
+        // }
 
         SmeLoanRegistration loan = schedule.getSmeLoan();
         // Check if any schedule is 90+ days late

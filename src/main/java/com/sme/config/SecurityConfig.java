@@ -26,6 +26,7 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -39,12 +40,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/refresh-token").permitAll()
                         .requestMatchers("/api/users/register/**").permitAll()
-                        .requestMatchers("/api/permissions/**").permitAll()
-                        .requestMatchers("/email-websocket").permitAll()
-                        .requestMatchers("/api/email/list").permitAll()
+                        .requestMatchers("/api/branches/**").permitAll()
                         .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/api/notifications/unread").permitAll()
-                        .requestMatchers("/api/users/current").permitAll()
+                        .requestMatchers("/api/current-accounts/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -61,5 +59,4 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 }

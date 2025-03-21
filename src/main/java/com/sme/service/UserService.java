@@ -8,7 +8,7 @@
     import java.io.IOException;
     import java.util.List;
 
-    public interface UserService {
+    public interface  UserService {
 
         UserDTO createUser(UserDTO userDTO, MultipartFile file);
 

@@ -20,6 +20,7 @@ public class ProductTypeController {
         return productTypeService.getAllProductTypes();
     }
 
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductTypeDTO> getProductTypeById(@PathVariable Long id) {
         ProductTypeDTO productTypeDTO = productTypeService.getProductTypeById(id);

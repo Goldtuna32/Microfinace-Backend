@@ -1,10 +1,10 @@
 package com.sme.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 @Data
 public class UserDTO {
@@ -19,4 +19,5 @@ public class UserDTO {
     private Long roleId;
     private Long branchId;
     private LocalDateTime lastLogin;
+    private List<PermissionDTO> permissions;
 }

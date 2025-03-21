@@ -173,12 +173,14 @@ public class ReportServiceImpl implements ReportService {
         // Compile subreports dynamically
         JasperReport collateralSubreport = compileSubreport("/reports/collateral_subreport.jrxml");
         JasperReport transactionSubreport = compileSubreport("/reports/transaction_subreport.jrxml");
+        JasperReport transactionPieSubreport = compileSubreport("/reports/transaction_pie_subreport.jrxml");
 
         // Pass compiled subreports and lists as parameters
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("REPORT_TITLE", "CIF Detail Report - " + cif.getSerialNumber());
         parameters.put("CREATED_DATE", LocalDateTime.now());
         parameters.put("TRANSACTION_LIST", transactions); // Set TRANSACTION_LIST
+        parameters.put("SUMMARIZED_TRANSACTIONS", summarizedTransactions);
         parameters.put("COLLATERAL_LIST", collaterals);   // Set COLLATERAL_LIST
 
         if (collateralSubreport != null) {
@@ -187,11 +189,23 @@ public class ReportServiceImpl implements ReportService {
         } else {
             System.out.println("Collateral Subreport is null");
         }
+        if (transactionPieSubreport != null) {
+            parameters.put("TRANSACTION_PIE_SUBREPORT", transactionPieSubreport);
+            System.out.println("Transaction Pie Subreport: " + transactionPieSubreport);
+        } else {
+            System.out.println(("Transaction Pie Subreport is Null"));
+        }
         if (transactionSubreport != null) {
             parameters.put("TRANSACTION_SUBREPORT", transactionSubreport);
             System.out.println("Transaction Subreport: " + transactionSubreport);
         } else {
             System.out.println("Transaction Subreport is null");
+        }
+        if (transactionPieSubreport != null) {
+            parameters.put("TRANSACTION_PIE_SUBREPORT", transactionPieSubreport);
+            System.out.println("Transaction Pie Subreport: " + transactionPieSubreport);
+        } else {
+            System.out.println(("Transaction Pie Subreport is Null"));
         }
 
         System.out.println("Transactions: " + transactions);

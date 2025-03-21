@@ -2,7 +2,6 @@ package com.sme.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.dto.UserDTO;
-import com.sme.entity.User;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -85,9 +84,17 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<User> getCurrentUser(Authentication authentication) {
-        String username = authentication.getName();
-        return ResponseEntity.ok(userService.getUserEntityByUsername(username));
+
+    @GetMapping("/current")
+    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Principal is UserDetails (e.g., org.springframework.security.core.userdetails.User)
+        String email = authentication.getName(); // Email from JWT
+        UserDTO userDTO = userService.getCurrentUser(email);
+        return ResponseEntity.ok(userDTO);
     }
+
 }

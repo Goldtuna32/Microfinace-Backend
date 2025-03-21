@@ -1,6 +1,7 @@
     package com.sme.service;
 
     import com.sme.dto.UserDTO;
+    import com.sme.entity.Permission;
     import com.sme.entity.User;
     import org.springframework.web.multipart.MultipartFile;
 
@@ -32,6 +33,13 @@
         User save(User user);
 
         boolean authenticate(String rawPassword, String storedHashedPassword);
+
+        UserDTO getCurrentUser(String email); // Fetch current user with permissions
+        List<Permission> getUserPermissions(Long userId);
+
+        User getUserEntityByEmail(String email);
+
+        List<Permission> getAllPermissions();
 
 
     }

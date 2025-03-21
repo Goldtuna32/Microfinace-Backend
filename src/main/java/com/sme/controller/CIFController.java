@@ -9,6 +9,7 @@ import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +30,7 @@ public class CIFController {
     @Autowired
     private CIFRepository cifRepository;
 
+    @PreAuthorize("hasAuthority('CIF_READ')")
     @GetMapping("/active")
     public ResponseEntity<Page<CIFDTO>> getAllCIFs(
             @RequestParam(defaultValue = "0") int page,
@@ -39,6 +41,7 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
+    @PreAuthorize("hasAuthority('CIF_CREATE')")
     @GetMapping("/check-duplicate")
     public ResponseEntity<Map<String, Boolean>> checkDuplicate(
             @RequestParam(required = false) String name,
@@ -54,6 +57,7 @@ public class CIFController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('CIF_READ')")
     @GetMapping("/deleted")
     public ResponseEntity<Page<CIFDTO>> getDeletedCIFs(
             @RequestParam(defaultValue = "0") int page,
@@ -64,8 +68,8 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
-
-    @GetMapping("/cif/{id}")
+    @PreAuthorize("hasAuthority('CIF_READ')")
+    @GetMapping("/{id}")
     public ResponseEntity<?> getCIFById(@PathVariable Long id) {
         Optional<CIFDTO> cifDTO = cifService.getCIFById(id);
 
@@ -76,7 +80,7 @@ public class CIFController {
         }
     }
 
-
+    @PreAuthorize("hasAuthority('CIF_CREATE')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CIFDTO> createCIF(
             @RequestParam("name") String name,
@@ -110,6 +114,7 @@ public class CIFController {
         return ResponseEntity.ok(cifService.createCIF(cifDTO, frontNrc, backNrc));
     }
 
+    @PreAuthorize("hasAuthority('CIF_UPDATE')")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<CIFDTO> updateCIF(
             @PathVariable Long id,
@@ -145,8 +150,7 @@ public class CIFController {
         return ResponseEntity.ok(cifService.updateCIF(id, cifDTO, frontNrc, backNrc));
     }
 
-
-
+    @PreAuthorize("hasAuthority('CIF_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> softDeleteCIF(@PathVariable Long id) {
         return cifService.softDeleteCIF(id)
@@ -154,6 +158,7 @@ public class CIFController {
                 : ResponseEntity.notFound().build();
     }
 
+    @PreAuthorize("hasAuthority('CIF_DELETE')")
     @PutMapping("/{id}/restore")
     public ResponseEntity<Void> restoreCIF(@PathVariable Long id) {
         return cifService.restoreCIF(id)

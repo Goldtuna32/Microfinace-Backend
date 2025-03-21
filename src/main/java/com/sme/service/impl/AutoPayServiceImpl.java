@@ -355,14 +355,25 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         // 3. Interest
         if (balance.compareTo(BigDecimal.ZERO) > 0) {
             if (balance.compareTo(requiredInterest) >= 0) {
+                // Full payment
                 paidInterest = requiredInterest;
                 balance = balance.subtract(paidInterest);
                 schedule.setInterestAmount(BigDecimal.ZERO);
+            } else if (today.isEqual(schedule.getGraceEndDate())) {
+                // Partial payment at grace end date
+                paidInterest = balance;
+                BigDecimal remainingInterest = requiredInterest.subtract(balance);
+                // Move remaining interest to IOD
+                schedule.setInterestOverDue(schedule.getInterestOverDue().add(remainingInterest));
+                schedule.setInterestAmount(BigDecimal.ZERO);
+                balance = BigDecimal.ZERO;
             } else {
+                // Normal partial payment before grace end
                 paidInterest = balance;
                 schedule.setInterestAmount(requiredInterest.subtract(balance));
                 balance = BigDecimal.ZERO;
             }
+            System.out.println("Partial payment of interest: " + paidInterest);
         }
 
         // 4. Principal

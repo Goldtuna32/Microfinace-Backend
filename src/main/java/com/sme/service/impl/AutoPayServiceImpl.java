@@ -131,7 +131,7 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         // Sort all schedules by due date
         schedules.sort((a, b) -> a.getDueDate().compareTo(b.getDueDate()));
 
-        // Check for 90+ days late case first - using maximum late days
+        // Check for 180+ or 90+ days late case first - using maximum late days
         long maxLateDays = schedules.stream()
                 .filter(s -> s.getStatus() != 6)
                 .mapToLong(s -> {
@@ -149,8 +149,18 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         if (!lateSchedules.isEmpty()) {
             // Calculate one common late fee for all late terms
             BigDecimal totalOutstanding = calculateTotalOutstanding(lateSchedules);
-            BigDecimal totalLateFee = calculate90DaysLateFee(lateSchedules.get(0).getSmeLoan(),
-                    totalOutstanding, 90);
+            BigDecimal totalLateFee;
+            
+            // Use different rate based on late days
+            if (maxLateDays >= 180) {
+                totalLateFee = calculate180DaysLateFee(lateSchedules.get(0).getSmeLoan(),
+                        totalOutstanding, maxLateDays);
+                System.out.println("Calculating 180+ days late fee");
+            } else {
+                totalLateFee = calculate90DaysLateFee(lateSchedules.get(0).getSmeLoan(),
+                        totalOutstanding, maxLateDays);
+                System.out.println("Calculating 90+ days late fee");
+            }
 
             // Check if we have enough money for total late fee
             if (remainingBalance.compareTo(totalLateFee) >= 0) {
@@ -419,6 +429,19 @@ public class AutoPayServiceImpl implements AutoPaymentService {
         }
 
         BigDecimal dailyRate = ninetyDayRate
+                .divide(new BigDecimal("100"))
+                .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
+
+        BigDecimal lateFee = totalOutstanding.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
+        return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
+    }
+    private BigDecimal calculate180DaysLateFee(SmeLoanRegistration loan, BigDecimal totalOutstanding, long lateDays) {
+        BigDecimal oneEightyDayRate = loan.getOne_hundred_and_eighty_late_fee_rate();
+        if (oneEightyDayRate == null) {
+            oneEightyDayRate = new BigDecimal("12.00"); // 12% default rate for 180+ days
+        }
+
+        BigDecimal dailyRate = oneEightyDayRate
                 .divide(new BigDecimal("100"))
                 .divide(new BigDecimal("365"), 10, BigDecimal.ROUND_HALF_UP);
 

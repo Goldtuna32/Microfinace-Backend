@@ -1,14 +1,18 @@
 package com.sme.controller;
 
 import com.sme.dto.HpProductDTO;
+import com.sme.repository.HpProductRepository;
 import com.sme.service.HpProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/hp-products")
@@ -17,11 +21,16 @@ public class HpProductController {
     @Autowired
     private HpProductService hpProductService;
 
+    @Autowired
+    private HpProductRepository hpProductRepository;
+
+    @PreAuthorize("hasRole('HP_PRODUCT_READ')")
     @GetMapping
     public List<HpProductDTO> getAllHpProducts() {
         return hpProductService.getAllHpProducts();
     }
 
+    @PreAuthorize("hasRole('HP_PRODUCT_READ')")
     @GetMapping("/{id}")
     public ResponseEntity<HpProductDTO> getHpProductById(@PathVariable Long id) {
         HpProductDTO hpProductDTO = hpProductService.getHpProductById(id);
@@ -32,6 +41,7 @@ public class HpProductController {
         }
     }
 
+    @PreAuthorize("hasRole('HP_PRODUCT_CREATE')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<HpProductDTO> createHpProduct(
             @RequestPart("hpProduct") HpProductDTO hpProductDTO,
@@ -44,6 +54,17 @@ public class HpProductController {
         return ResponseEntity.ok(createdProduct);
     }
 
+    @PreAuthorize("hasAuthority('HP_PRODUCT_CREATE')")
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Map<String, Boolean>> checkDuplicate(
+            @RequestParam(required = false) String name) {
+        boolean isDuplicate = hpProductRepository.existsByName(name);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isDuplicate", isDuplicate);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('HP_PRODUCT_UPDATE')")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<HpProductDTO> updateHpProduct(
             @PathVariable Long id,
@@ -58,12 +79,14 @@ public class HpProductController {
         }
     }
 
+    @PreAuthorize("hasRole('HP_PRODUCT_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteHpProduct(@PathVariable Long id) {
         hpProductService.deleteHpProduct(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('HP_PRODUCT_DELETE')")
     @PutMapping("/{id}/restore")
     public ResponseEntity<HpProductDTO> restoreHpProduct(@PathVariable Long id) {
         HpProductDTO restored = hpProductService.restoreHpProduct(id);

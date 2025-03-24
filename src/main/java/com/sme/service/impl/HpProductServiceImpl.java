@@ -6,6 +6,7 @@ import com.sme.dto.HpProductDTO;
 import com.sme.entity.HpProduct;
 import com.sme.entity.ProductType;
 import com.sme.entity.DealerRegistration;
+import com.sme.exception.*;
 import com.sme.repository.HpProductRepository;
 import com.sme.repository.ProductTypeRepository;
 import com.sme.repository.DealerRegistrationRepository;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,26 +53,40 @@ public class HpProductServiceImpl implements HpProductService {
     @Override
     public HpProductDTO getHpProductById(Long id) {
         Optional<HpProduct> hpProduct = hpProductRepository.findById(id);
-        return hpProduct.map(hp -> modelMapper.map(hp, HpProductDTO.class)).orElse(null);
+        if (hpProduct.isEmpty()) {
+            throw new HpProductNotFoundException(id);
+        }
+        return modelMapper.map(hpProduct.get(), HpProductDTO.class);
     }
 
     @Override
+    @Transactional
     public HpProductDTO createHpProduct(HpProductDTO hpProductDTO) {
-        HpProduct hpProduct = modelMapper.map(hpProductDTO, HpProduct.class);
-        hpProduct.setStatus(1); // Default active status
+        validateHpProductDTO(hpProductDTO);
 
-        // Set related entities
-        ProductType productType = productTypeRepository.findById(hpProductDTO.getProductTypeId())
-                .orElseThrow(() -> new RuntimeException("ProductType not found"));
-        hpProduct.setProductType(productType);
+        if (hpProductRepository.existsByNameAndDealerRegistrationId(
+                hpProductDTO.getName(), hpProductDTO.getDealerRegistrationId())) {
+            throw new DuplicateHpProductException(hpProductDTO.getName(), hpProductDTO.getDealerRegistrationId());
+        }
 
-        DealerRegistration dealerRegistration = dealerRegistrationRepository.findById(hpProductDTO.getDealerRegistrationId())
-                .orElseThrow(() -> new RuntimeException("DealerRegistration not found"));
-        hpProduct.setDealerRegistration(dealerRegistration);
+        try {
+            HpProduct hpProduct = modelMapper.map(hpProductDTO, HpProduct.class);
+            hpProduct.setStatus(1); // Default active status
 
-        // Photo URL is already set in the DTO by the controller
-        HpProduct savedHpProduct = hpProductRepository.save(hpProduct);
-        return modelMapper.map(savedHpProduct, HpProductDTO.class);
+            ProductType productType = productTypeRepository.findById(hpProductDTO.getProductTypeId())
+                    .orElseThrow(() -> new RuntimeException("ProductType not found with ID: " + hpProductDTO.getProductTypeId()));
+            hpProduct.setProductType(productType);
+
+            DealerRegistration dealerRegistration = dealerRegistrationRepository.findById(hpProductDTO.getDealerRegistrationId())
+                    .orElseThrow(() -> new DealerNotFoundException(hpProductDTO.getDealerRegistrationId()));
+            hpProduct.setDealerRegistration(dealerRegistration);
+
+            HpProduct savedHpProduct = hpProductRepository.save(hpProduct);
+            return modelMapper.map(savedHpProduct, HpProductDTO.class);
+        } catch (Exception e) {
+            throw new HpProductCreationException(
+                    "Failed to create HP product: " + hpProductDTO.getName(), e);
+        }
     }
 
     public String uploadImage(MultipartFile file) {
@@ -78,49 +94,53 @@ public class HpProductServiceImpl implements HpProductService {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             return uploadResult.get("url").toString();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to upload image to Cloudinary", e);
+            throw new ImageUploadException("Failed to upload image to Cloudinary", e);
         }
     }
 
     @Override
+    @Transactional
     public HpProductDTO updateHpProduct(Long id, HpProductDTO hpProductDTO, MultipartFile photo) {
-        Optional<HpProduct> existingHpProductOpt = hpProductRepository.findById(id);
-        if (existingHpProductOpt.isEmpty()) {
-            System.out.println("Product not found for ID: " + id);
-            return null;
+        HpProduct hpProduct = hpProductRepository.findById(id)
+                .orElseThrow(() -> new HpProductNotFoundException(id));
+
+        validateHpProductDTO(hpProductDTO);
+
+        // Check for duplicate, excluding current product
+        if (hpProductDTO.getName() != null &&
+                !hpProductDTO.getName().equals(hpProduct.getName()) &&
+                hpProductRepository.existsByNameAndDealerRegistrationId(
+                        hpProductDTO.getName(), hpProductDTO.getDealerRegistrationId())) {
+            throw new DuplicateHpProductException(hpProductDTO.getName(), hpProductDTO.getDealerRegistrationId());
         }
 
-        HpProduct hpProduct = existingHpProductOpt.get();
-        System.out.println("Before updating - ID: " + hpProduct.getId()); // Should be 5
-        String oldPhotoUrl = hpProduct.getHpProductPhoto();
+        try {
+            String oldPhotoUrl = hpProduct.getHpProductPhoto();
 
-        // Manually update fields instead of using ModelMapper
-        hpProduct.setName(hpProductDTO.getName());
-        hpProduct.setPrice(hpProductDTO.getPrice());
-        hpProduct.setCommissionFee(hpProductDTO.getCommissionFee());
-        // Status is not updated here; assuming it’s managed separately (e.g., delete/restore)
+            hpProduct.setName(hpProductDTO.getName());
+            hpProduct.setPrice(hpProductDTO.getPrice());
+            hpProduct.setCommissionFee(hpProductDTO.getCommissionFee());
 
-        // Update related entities
-        ProductType productType = productTypeRepository.findById(hpProductDTO.getProductTypeId())
-                .orElseThrow(() -> new RuntimeException("ProductType not found"));
-        hpProduct.setProductType(productType);
+            ProductType productType = productTypeRepository.findById(hpProductDTO.getProductTypeId())
+                    .orElseThrow(() -> new RuntimeException("ProductType not found with ID: " + hpProductDTO.getProductTypeId()));
+            hpProduct.setProductType(productType);
 
-        DealerRegistration dealerRegistration = dealerRegistrationRepository.findById(hpProductDTO.getDealerRegistrationId())
-                .orElseThrow(() -> new RuntimeException("DealerRegistration not found"));
-        hpProduct.setDealerRegistration(dealerRegistration);
+            DealerRegistration dealerRegistration = dealerRegistrationRepository.findById(hpProductDTO.getDealerRegistrationId())
+                    .orElseThrow(() -> new DealerNotFoundException(hpProductDTO.getDealerRegistrationId()));
+            hpProduct.setDealerRegistration(dealerRegistration);
 
-        // Handle photo update
-        if (photo != null && !photo.isEmpty()) {
-            deleteImage(oldPhotoUrl);
-            String newPhotoUrl = uploadImage(photo);
-            hpProduct.setHpProductPhoto(newPhotoUrl);
+            if (photo != null && !photo.isEmpty()) {
+                deleteImage(oldPhotoUrl);
+                String newPhotoUrl = uploadImage(photo);
+                hpProduct.setHpProductPhoto(newPhotoUrl);
+            }
+
+            HpProduct updatedHpProduct = hpProductRepository.save(hpProduct);
+            return modelMapper.map(updatedHpProduct, HpProductDTO.class);
+        } catch (Exception e) {
+            throw new HpProductUpdateException(
+                    "Failed to update HP product with id: " + id, e);
         }
-
-        System.out.println("Before save - ID: " + hpProduct.getId()); // Should still be 5
-        HpProduct updatedHpProduct = hpProductRepository.save(hpProduct);
-        System.out.println("After save - ID: " + updatedHpProduct.getId()); // Should still be 5
-
-        return modelMapper.map(updatedHpProduct, HpProductDTO.class);
     }
 
     private void deleteImage(String imageUrl) {
@@ -131,30 +151,76 @@ public class HpProductServiceImpl implements HpProductService {
             String publicId = imageUrl.substring(imageUrl.lastIndexOf("/") + 1, imageUrl.lastIndexOf("."));
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
         } catch (Exception e) {
-            System.err.println("Failed to delete image: " + e.getMessage());
+            throw new HpProductUpdateException("Failed to delete image: " + imageUrl, e);
         }
     }
 
     @Override
     @Transactional
     public void deleteHpProduct(Long id) {
-        hpProductRepository.softDelete(id);
+        if (!hpProductRepository.existsById(id)) {
+            throw new HpProductNotFoundException(id);
+        }
+        try {
+            hpProductRepository.softDelete(id);
+        } catch (Exception e) {
+            throw new HpProductUpdateException(
+                    "Failed to soft delete HP product with id: " + id, e);
+        }
     }
 
     @Override
     @Transactional
     public HpProductDTO restoreHpProduct(Long id) {
-        Optional<HpProduct> hpProductOpt = hpProductRepository.findById(id);
-        if (hpProductOpt.isPresent()) {
-            HpProduct hpProduct = hpProductOpt.get();
-            if (hpProduct.getStatus() == 1) {
-                throw new RuntimeException("HP Product with id: " + id + " is already active");
-            }
-            hpProduct.setStatus(1); // Restore to active
+        HpProduct hpProduct = hpProductRepository.findById(id)
+                .orElseThrow(() -> new HpProductNotFoundException(id));
+
+        if (hpProduct.getStatus() == 1) {
+            throw new HpProductValidationException(
+                    "HP Product with id: " + id + " is already active");
+        }
+
+        try {
+            hpProduct.setStatus(1);
             HpProduct restoredHpProduct = hpProductRepository.save(hpProduct);
             return modelMapper.map(restoredHpProduct, HpProductDTO.class);
+        } catch (Exception e) {
+            throw new HpProductUpdateException(
+                    "Failed to restore HP product with id: " + id, e);
         }
-        return null;
+    }
+
+    private void validateHpProductDTO(HpProductDTO hpProductDTO) {
+        // Required field validation
+        if (hpProductDTO.getName() == null || hpProductDTO.getName().trim().isEmpty()) {
+            throw new MissingRequiredFieldException("name");
+        }
+        if (hpProductDTO.getPrice() == null) {
+            throw new MissingRequiredFieldException("price");
+        }
+        if (hpProductDTO.getCommissionFee() == null) {
+            throw new MissingRequiredFieldException("commissionFee");
+        }
+        if (hpProductDTO.getProductTypeId() == null) {
+            throw new MissingRequiredFieldException("productTypeId");
+        }
+        if (hpProductDTO.getDealerRegistrationId() == null) {
+            throw new MissingRequiredFieldException("dealerRegistrationId");
+        }
+
+        // Price and commission fee validation
+        if (hpProductDTO.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidPriceException(hpProductDTO.getPrice());
+        }
+        if (hpProductDTO.getCommissionFee().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidCommissionFeeException(hpProductDTO.getCommissionFee());
+        }
+
+        // Name length validation (example: max 100 characters)
+        if (hpProductDTO.getName().length() > 100) {
+            throw new HpProductValidationException(
+                    "Product name exceeds maximum length of 100 characters");
+        }
     }
 
 

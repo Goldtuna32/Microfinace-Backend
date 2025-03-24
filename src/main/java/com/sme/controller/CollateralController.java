@@ -3,18 +3,22 @@ package com.sme.controller;
 import com.sme.dto.CollateralDTO;
 import com.sme.dto.SmeLoanCollateralDTO;
 import com.sme.entity.SmeLoanCollateral;
+import com.sme.repository.CollateralRepository;
 import com.sme.repository.SmeLoanCollateralRepository;
 import com.sme.service.CollateralService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
@@ -34,6 +38,9 @@ public class CollateralController {
 
     private final CollateralService collateralService;
 
+
+
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/active")
     public ResponseEntity<Page<CollateralDTO>> getAllCollaterals(
             @RequestParam(defaultValue = "0") int page,
@@ -67,6 +74,7 @@ public class CollateralController {
         return ResponseEntity.ok(pageResult);
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/deleted")
     public ResponseEntity<Page<CollateralDTO>> getDeletedCollaterals(
             @RequestParam(defaultValue = "0") int page,
@@ -101,6 +109,7 @@ public class CollateralController {
     }
 
 
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/{id}")
     public ResponseEntity<CollateralDTO> getCollateralById(@PathVariable Long id) {
         return collateralService.getCollateralById(id)
@@ -108,6 +117,7 @@ public class CollateralController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_CREATE')")
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<CollateralDTO> createCollateral(
             @ModelAttribute CollateralDTO collateralDTO,
@@ -116,6 +126,8 @@ public class CollateralController {
         return ResponseEntity.ok(collateralService.createCollateral(collateralDTO, frontPhoto, backPhoto));
     }
 
+
+    @PreAuthorize("hasRole('COLLATERAL_UPDATE')")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<CollateralDTO> updateCollateral(
             @PathVariable Long id,
@@ -141,6 +153,7 @@ public class CollateralController {
         return ResponseEntity.ok(updatedCollateral);
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> softDeleteCollateral(@PathVariable Long id) {
         return collateralService.softDeleteCollateral(id)
@@ -148,6 +161,7 @@ public class CollateralController {
                 : ResponseEntity.notFound().build();
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_DELETE')")
     @PutMapping("/{id}/restore")
     public ResponseEntity<Void> restoreCollateral(@PathVariable Long id) {
         return collateralService.restoreCollateral(id)
@@ -155,6 +169,7 @@ public class CollateralController {
                 : ResponseEntity.notFound().build();
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/paginated")
     public ResponseEntity<Page<CollateralDTO>> getAllCollateralsPaginated(
             @RequestParam(defaultValue = "0") int page,
@@ -167,12 +182,14 @@ public class CollateralController {
         return ResponseEntity.ok(collateralService.getAllCollateralsPaginated(pageable));
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/cif/{cifId}")
     public ResponseEntity<List<CollateralDTO>> getCollateralsByCifId(@PathVariable Long cifId) {
         List<CollateralDTO> collaterals = collateralService.getCollateralsByCifId(cifId);
         return ResponseEntity.ok(collaterals);
     }
 
+    @PreAuthorize("hasRole('COLLATERAL_READ')")
     @GetMapping("/loan/{loanId}")
     public ResponseEntity<List<SmeLoanCollateralDTO>> getCollateralsByLoanId(@PathVariable Long loanId) {
         List<SmeLoanCollateral> collaterals = smeLoanCollateralRepository.findBySmeLoanId(loanId);

@@ -35,4 +35,9 @@ public class Permission {
     protected void onCreate() {
         createdAt = new Date();
     }
+
+    public boolean matches(String permissionString) {
+        String[] parts = permissionString.split("_");
+        return parts.length == 2 && permissionFunction.equals(parts[0]) && name.equals(parts[1]);
+    }
 }

@@ -10,11 +10,11 @@ import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,13 +29,14 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
     private final DefaultPermissionsConfig defaultPermissionsConfig;
-
     private final RolePermissionRepository rolePermissionRepository;
+    private final UserPermissionRepository userPermissionRepository;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
                            BranchRepository branchRepository, CloudinaryService cloudinaryService,
-                           PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, DefaultPermissionsConfig defaultPermissionsConfig, RolePermissionRepository rolePermissionRepository) {
+                           PasswordEncoder passwordEncoder, PermissionRepository permissionRepository,
+                           DefaultPermissionsConfig defaultPermissionsConfig, RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
@@ -44,9 +45,11 @@ public class UserServiceImpl implements UserService {
         this.permissionRepository = permissionRepository;
         this.defaultPermissionsConfig = defaultPermissionsConfig;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.userPermissionRepository = userPermissionRepository;
     }
 
     @Override
+    @Transactional
     public UserDTO createUser(UserDTO userDTO, MultipartFile file) {
         if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
@@ -60,9 +63,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(userDTO.getEmail());
         user.setPhoneNumber(userDTO.getPhoneNumber());
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-
         user.setDob(userDTO.getDob());
-
         user.setStatus(1); // Default active
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
@@ -82,8 +83,63 @@ public class UserServiceImpl implements UserService {
         user.setBranch(branch);
 
         User savedUser = userRepository.save(user);
-        assignDefaultPermissions(savedUser, role);
+
+        // Handle permissions
+        if (userDTO.getPermissions() != null && !userDTO.getPermissions().isEmpty()) {
+            userPermissionRepository.deleteByUserId(savedUser.getId()); // Clear existing user permissions
+            assignCustomUserPermissions(savedUser, userDTO.getPermissions());
+        } else {
+            assignDefaultPermissions(savedUser, savedUser.getRole());
+        }
+
+
         return mapToDTO(savedUser);
+    }
+
+    private void assignDefaultPermissions(User user, Role role) {
+        List<String> defaultPermissions = defaultPermissionsConfig.getDefaultPermissionsForRole(role.getName());
+        List<RolePermission> existingPermissions = rolePermissionRepository.findByRoleId(role.getId());
+
+        for (String perm : defaultPermissions) {
+            String[] parts = perm.split("_");
+            if (parts.length != 2) continue;
+
+            // Check if permission already exists for this role
+            if (existingPermissions.stream().noneMatch(rp -> rp.getPermission().matches(perm))) {
+                Permission permission = permissionRepository.findByPermissionFunctionAndName(parts[0], parts[1])
+                        .orElseGet(() -> {
+                            Permission newPerm = new Permission();
+                            newPerm.setPermissionFunction(parts[0]);
+                            newPerm.setName(parts[1]);
+                            newPerm.setDescription(parts[1] + " permission for " + parts[0]);
+                            newPerm.setCreatedAt(new Date());
+                            return permissionRepository.save(newPerm);
+                        });
+
+                RolePermission rolePermission = new RolePermission();
+                rolePermission.setRole(role);
+                rolePermission.setPermission(permission);
+                rolePermissionRepository.save(rolePermission);
+            }
+        }
+    }
+
+    private void assignCustomUserPermissions(User user, List<PermissionDTO> permissions) {
+        for (PermissionDTO permDTO : permissions) {
+            Permission permission = permissionRepository.findByPermissionFunctionAndName(permDTO.getPermissionFunction(), permDTO.getName())
+                    .orElseGet(() -> {
+                        Permission newPerm = new Permission();
+                        newPerm.setPermissionFunction(permDTO.getPermissionFunction());
+                        newPerm.setName(permDTO.getName());
+                        newPerm.setDescription(permDTO.getDescription());
+                        newPerm.setCreatedAt(new Date());
+                        return permissionRepository.save(newPerm);
+                    });
+            UserPermission userPermission = new UserPermission();
+            userPermission.setUser(user);
+            userPermission.setPermission(permission);
+            userPermissionRepository.save(userPermission);
+        }
     }
 
     @Override
@@ -92,7 +148,6 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return mapToDTO(user);
     }
-
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -111,11 +166,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserDTO updateUser(Long id, UserDTO userDTO, MultipartFile file) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Check for conflicts if username or email changes
         if (!user.getUsername().equals(userDTO.getUsername()) && userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
@@ -129,11 +184,9 @@ public class UserServiceImpl implements UserService {
         if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
             user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
-
-        // Set the dob from the userDTO
-     user.setDob(userDTO.getDob());
-
+        user.setDob(userDTO.getDob());
         user.setUpdatedAt(LocalDateTime.now());
+
         if (file != null && !file.isEmpty()) {
             if (user.getProfilePicture() != null && !user.getProfilePicture().equals("default.jpg")) {
                 cloudinaryService.deleteImage(user.getProfilePicture());
@@ -150,33 +203,32 @@ public class UserServiceImpl implements UserService {
         user.setBranch(branch);
 
         User updatedUser = userRepository.save(user);
+        assignDefaultPermissions(updatedUser, role); // Reassign permissions if role changes
         return mapToDTO(updatedUser);
     }
 
-    private void assignDefaultPermissions(User user, Role role) {
-        List<String> defaultPermissions = defaultPermissionsConfig.getDefaultPermissionsForRole(role.getName());
-        for (String perm : defaultPermissions) {
-            String[] parts = perm.split("_");
-            if (parts.length == 2) {
-                Permission permission = permissionRepository.findBypermissionFunctionAndName(parts[0], parts[1])
-                        .orElseGet(() -> {
-                            Permission newPerm = new Permission();
-                            newPerm.setPermissionFunction(parts[0]);
-                            newPerm.setName(parts[1]);
-                            newPerm.setDescription(parts[1] + " permission for " + parts[0]);
-                            newPerm.setCreatedAt(new Date());
-                            return permissionRepository.save(newPerm);
-                        });
-
-                RolePermission rolePermission = new RolePermission();
-                rolePermission.setRole(role);
-                rolePermission.setPermission(permission);
-                rolePermissionRepository.save(rolePermission);
-            }
-        }
+    @Override
+    @Transactional
+    public void softDeleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(2); // Inactive
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     @Override
+    @Transactional
+    public void restoreUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(1); // Active
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
     public void deleteUser(Long id) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -184,24 +236,6 @@ public class UserServiceImpl implements UserService {
             cloudinaryService.deleteImage(user.getProfilePicture());
         }
         userRepository.deleteById(id);
-    }
-
-    @Override
-    public void softDeleteUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setStatus(2);
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-    }
-
-    @Override
-    public void restoreUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setStatus(1);
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
     }
 
     @Override
@@ -226,54 +260,20 @@ public class UserServiceImpl implements UserService {
         return passwordEncoder.matches(rawPassword, storedHashedPassword);
     }
 
-    private UserDTO mapToDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setPhoneNumber(user.getPhoneNumber());
-
-        // Set the dob from the userDTO
-        // Set the dob from the User entity to UserDTO
-        if (user.getDob() != null) {
-            dto.setDob(user.getDob());  // Map dob from User to UserDTO
-        }
-
-        dto.setProfilePicture(user.getProfilePicture());
-        dto.setStatus(user.getStatus());
-        dto.setRoleId((long) user.getRole().getId());
-        dto.setBranchId(user.getBranch().getId());
-        return dto;
-    }
-
-    @Override
-    public User getUserEntityByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
-    // UserServiceImpl.java
     @Override
     public UserDTO getCurrentUser(String email) {
         User user = getUserEntityByEmail(email);
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
-        userDTO.setUsername(user.getUsername());
-        userDTO.setEmail(user.getEmail());
-        userDTO.setRoleId(user.getRole().getId());
-
-        // Add permissions
+        UserDTO userDTO = mapToDTO(user);
         List<Permission> permissions = getUserPermissions(user.getId());
         List<PermissionDTO> permissionDTOs = permissions.stream().map(p -> {
             PermissionDTO dto = new PermissionDTO();
             dto.setId(p.getId());
-            dto.setName(p.getName());
             dto.setPermissionFunction(p.getPermissionFunction());
+            dto.setName(p.getName());
             dto.setDescription(p.getDescription());
             return dto;
         }).collect(Collectors.toList());
         userDTO.setPermissions(permissionDTOs);
-
         return userDTO;
     }
 
@@ -289,7 +289,27 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User getUserEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Override
     public List<Permission> getAllPermissions() {
         return permissionRepository.findAll();
+    }
+
+    private UserDTO mapToDTO(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setDob(user.getDob());
+        dto.setProfilePicture(user.getProfilePicture());
+        dto.setStatus(user.getStatus());
+        dto.setRoleId((long) user.getRole().getId());
+        dto.setBranchId(user.getBranch().getId());
+        return dto;
     }
 }

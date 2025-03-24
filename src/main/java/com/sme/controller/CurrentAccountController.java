@@ -7,6 +7,7 @@ import com.sme.service.CurrentAccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,20 +25,20 @@ public class CurrentAccountController {
     @Autowired
     private CurrentAccountRepository currentAccountRepository;
 
-    // ✅ Get all Current Accounts
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping
     public List<CurrentAccountDTO> getAllCurrentAccounts() {
         return currentAccountService.getAllCurrentAccounts();
     }
 
-    // ✅ Get Current Account by ID
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping("/{id}")
     public ResponseEntity<CurrentAccountDTO> getCurrentAccountById(@PathVariable Long id) {
         Optional<CurrentAccountDTO> account = currentAccountService.getCurrentAccountById(id);
         return account.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // ✅ Create a new Current Account
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_CREATE')")
     @PostMapping
     public ResponseEntity<?> createCurrentAccount(@RequestBody CurrentAccountDTO accountDTO) {
         try {
@@ -47,6 +48,7 @@ public class CurrentAccountController {
         }
     }
 
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_UPDATE')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateCurrentAccount(@PathVariable Long id, @RequestBody CurrentAccountDTO accountDTO) {
         try {
@@ -57,18 +59,20 @@ public class CurrentAccountController {
         }
     }
 
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping("/exists/{cifId}")
     public boolean hasCurrentAccount(@PathVariable Long cifId) {
         return currentAccountService.hasCurrentAccount(cifId);
     }
 
-    // ✅ Delete Current Account
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCurrentAccount(@PathVariable Long id) {
         currentAccountService.softDeleteCurrentAccount(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping("/paginated")
     public ResponseEntity<Page<CurrentAccountDTO>> getAllCurrentAccountsPaginated(
             @RequestParam(defaultValue = "0") int page,
@@ -76,11 +80,13 @@ public class CurrentAccountController {
         return ResponseEntity.ok(currentAccountService.getAllCurrentAccountsPaginated(page, size));
     }
 
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping("/by-cif/{cifId}")
     public CurrentAccountDTO getCurrentAccountsByCifId(@PathVariable Long cifId) {
         return currentAccountService.getCurrentAccountByCifId(cifId);
     }
 
+    @PreAuthorize("hasRole('CURRENT_ACCOUNT_READ')")
     @GetMapping("/serial/{serialNumber}")
     public ResponseEntity<List<CurrentAccountDTO>> getCurrentAccountsByCifSerialNumber(@PathVariable String serialNumber) {
         List<CurrentAccount> accounts = currentAccountRepository.findByCifSerialNumber(serialNumber);

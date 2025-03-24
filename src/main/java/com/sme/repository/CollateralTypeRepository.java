@@ -8,4 +8,7 @@ import java.util.List;
 @Repository
 public interface CollateralTypeRepository extends JpaRepository<CollateralType, Long> {
     List<CollateralType> findByStatus(Integer status);
+
+    boolean existsByName(String name);
+    boolean existsByNameAndIdNot(String name, Long id);
 }

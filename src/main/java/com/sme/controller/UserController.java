@@ -2,6 +2,7 @@ package com.sme.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.dto.UserDTO;
+import com.sme.entity.Permission;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -27,7 +28,7 @@ public class UserController {
     }
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_CREATE')")
     public ResponseEntity<UserDTO> createUser(
             @RequestPart("user") String userJson,
             @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
@@ -95,6 +96,13 @@ public class UserController {
         String email = authentication.getName(); // Email from JWT
         UserDTO userDTO = userService.getCurrentUser(email);
         return ResponseEntity.ok(userDTO);
+    }
+
+    // Add to UserController.java
+    @GetMapping("/permissions")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Permission>> getAllPermissions() {
+        return ResponseEntity.ok(userService.getAllPermissions());
     }
 
 }

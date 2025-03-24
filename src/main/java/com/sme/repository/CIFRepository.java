@@ -34,4 +34,5 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
     boolean existsByPhoneNumber(String phoneNumber);
     boolean existsByEmail(String email);
 
+
 }

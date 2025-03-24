@@ -11,6 +11,7 @@ import java.util.List;
 @Data
 public class SmeLoanRegistrationDTO {
     private Long id;
+    private String serialCode;
     private BigDecimal loanAmount;
     private BigDecimal interestRate;
     private BigDecimal late_fee_rate;

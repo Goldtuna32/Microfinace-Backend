@@ -18,6 +18,9 @@ public class SmeLoanRegistration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "serial_code", nullable = false, unique = true)
+    private String serialCode;
+
     @Column(name = "loan_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal loanAmount;
 

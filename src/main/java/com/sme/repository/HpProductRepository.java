@@ -1,7 +1,6 @@
 package com.sme.repository;
 
  
-import com.sme.entity.DealerRegistration;
 import com.sme.entity.HpProduct;
 import com.sme.entity.ProductType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,7 +26,8 @@ public interface HpProductRepository extends JpaRepository<HpProduct, Long> {
 
     List<HpProduct> findByProductType(ProductType productType);
 
-    List<HpProduct> findByDealerRegistration(DealerRegistration dealerRegistration);
+    List<HpProduct> findByDealerRegistrationId(Long dealerRegistration);
+
 
 
 }

@@ -45,7 +45,7 @@ public class SmeLoanRegistration {
     @Column(name = "document_fee", nullable = false)
     private BigDecimal documentFee;
 
-    @Column(name = "service_charges", nullable = false)
+    @Column(name = "service_charges", nullable  = false)
     private BigDecimal serviceCharges;
 
     @StatusConverter

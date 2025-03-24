@@ -22,5 +22,9 @@ public interface HpRegistrationService {
 
     HpRegistrationDTO updateHpRegistration(Long id, HpRegistrationDTO dto);
 
-    void deleteHpRegistration(Long id);
+    void softDeleteHpRegistration(Long id);
+
+    void restoreHpRegistration(Long id);
+
+    HpRegistrationDTO save(HpRegistrationDTO hpDto);
 }

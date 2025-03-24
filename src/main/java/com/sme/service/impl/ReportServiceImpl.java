@@ -2,8 +2,13 @@ package com.sme.service.impl;
 
 import com.sme.dto.AccountTransactionDTO;
 import com.sme.dto.CIFDTO;
+import com.sme.dto.HpProductDTO;
 import com.sme.entity.AccountTransaction;
+import com.sme.entity.DealerRegistration;
+import com.sme.entity.HpProduct;
 import com.sme.repository.AccountTransactionRepository;
+import com.sme.repository.DealerRegistrationRepository;
+import com.sme.repository.HpProductRepository;
 import com.sme.service.CIFService;
 import com.sme.service.ReportService;
 import net.sf.jasperreports.engine.*;
@@ -21,11 +26,13 @@ import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -39,6 +46,11 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private AccountTransactionRepository transactionRepository;
 
+    @Autowired
+    private HpProductRepository hpProductRepository;
+
+    @Autowired
+    private DealerRegistrationRepository dealerRegistrationRepository;
 
     @Override
     public byte[] generateActiveCIFReport(String format) throws Exception {
@@ -81,6 +93,43 @@ public class ReportServiceImpl implements ReportService {
             return JasperExportManager.exportReportToPdf(jasperPrint);
         }
     }
+
+    @Override
+    public byte[] generateHpProductReport(Long dealerRegistrationId, String format) throws Exception {
+        // Fetch data
+        List<HpProductDTO> products = hpProductRepository.findByDealerRegistrationId(dealerRegistrationId)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+
+        if (products.isEmpty()) {
+            throw new Exception("No HP products found for dealer ID: " + dealerRegistrationId);
+        }
+
+        // Fetch dealer name (assuming you have a method to get the dealer by registration ID)
+        DealerRegistration dealer = dealerRegistrationRepository.findById(dealerRegistrationId)
+                .orElseThrow(() -> new Exception("Dealer not found for ID: " + dealerRegistrationId));
+
+        // Load JRXML file
+        InputStream reportStream = this.getClass().getResourceAsStream("/reports/hp_product_report.jrxml");
+        if (reportStream == null) {
+            throw new Exception("Report template not found.");
+        }
+
+        JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
+        JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(products);
+
+        // Report Parameters
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("DEALER_NAME", dealer.getCompanyName());
+        System.out.println(dealer.getCompanyName());
+        parameters.put("CREATED_DATE", LocalDate.now());
+
+        // Fill report
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, dataSource);
+
+        return format.equalsIgnoreCase("excel") ? exportToExcel(jasperPrint) : JasperExportManager.exportReportToPdf(jasperPrint);
+    }
+
+
 
     private byte[] exportToExcel(JasperPrint jasperPrint) throws Exception {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -125,6 +174,17 @@ public class ReportServiceImpl implements ReportService {
         return dto;
     }
 
+    private HpProductDTO mapToDTO(HpProduct entity) {
+        HpProductDTO dto = new HpProductDTO();
+        dto.setId(entity.getId());
+        dto.setName(entity.getName());
+        dto.setStatus(entity.getStatus());
+        dto.setPrice(entity.getPrice());
+        dto.setCommissionFee(entity.getCommissionFee());
+        return dto;
+    }
+
+
     @Override
     public byte[] generateTransactionReport(String format) throws Exception {
         InputStream reportStream = getClass().getResourceAsStream("/reports/transaction_report.jrxml");
@@ -150,4 +210,10 @@ public class ReportServiceImpl implements ReportService {
 
         return outputStream.toByteArray();
     }
+
+
+
+
+
+
 }

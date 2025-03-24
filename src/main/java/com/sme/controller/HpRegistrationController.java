@@ -3,6 +3,7 @@ package com.sme.controller;
 import com.sme.dto.HpRegistrationDTO;
 import com.sme.service.HpRegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,9 +25,11 @@ public class HpRegistrationController {
         return service.getHpRegistrationById(id);
     }
 
+
     @PostMapping
-    public HpRegistrationDTO createHpRegistration(@RequestBody HpRegistrationDTO dto) {
-        return service.createHpRegistration(dto);
+    public ResponseEntity<HpRegistrationDTO> createHpRegistration(@RequestBody HpRegistrationDTO hpDto) {
+        HpRegistrationDTO savedHp = service.save(hpDto);
+        return ResponseEntity.ok(savedHp);
     }
 
     @PutMapping("/{id}")
@@ -34,8 +37,18 @@ public class HpRegistrationController {
         return service.updateHpRegistration(id, dto);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteHpRegistration(@PathVariable Long id) {
-        service.deleteHpRegistration(id);
+    @PutMapping("/{id}/delete")
+    public void softDeleteHpRegistration(@PathVariable Long id) {
+        service.softDeleteHpRegistration(id);
     }
+
+    // Restore: set status back to 1
+    @PutMapping("/{id}/restore")
+    public void restoreHpRegistration(@PathVariable Long id) {
+        service.restoreHpRegistration(id);
+
+    }
+
+
+
 }

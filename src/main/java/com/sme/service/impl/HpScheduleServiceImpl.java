@@ -53,7 +53,8 @@ public class HpScheduleServiceImpl implements HpScheduleService {
         LocalDateTime startDate = hpRegistration.getStartDate();
         for (int i = 1; i <= hpRegistration.getLoanTerm(); i++) {
             HpSchedule schedule = new HpSchedule();
-            schedule.setDate(Timestamp.valueOf(startDate.plusMonths(i)));
+            schedule.setDueDate(null);
+            schedule.setGraceEndDate(null);
             schedule.setInterestAmount(1000L); // Placeholder for interest calculation
             schedule.setPrincipalAmount(monthlyInstallment.longValue());
             schedule.setLateDay(0L);

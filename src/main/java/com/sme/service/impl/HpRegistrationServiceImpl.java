@@ -58,7 +58,7 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         if (dto.getLoanTerm() != null) existingHp.setLoanTerm(dto.getLoanTerm());
         if (dto.getInterestRate() != null) existingHp.setInterestRate(dto.getInterestRate());
         if (dto.getStartDate() != null) existingHp.setStartDate(dto.getStartDate());
-        if (dto.getEndDate() != null) existingHp.setEndDate(dto.getEndDate());
+        //if (dto.getEndDate() != null) existingHp.setEndDate(dto.getEndDate());
         if (dto.getStatus() != null) existingHp.setStatus(dto.getStatus());
         if (dto.getCurrentAccountId() != null) existingHp.setCurrentAccountId(dto.getCurrentAccountId());
         if (dto.getHpProductId() != null) existingHp.setHpProductId(dto.getHpProductId());

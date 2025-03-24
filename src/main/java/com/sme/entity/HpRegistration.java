@@ -21,6 +21,9 @@ public class HpRegistration {
     @Column(name = "created_date", nullable = false)
     private LocalDateTime createdDate;
 
+    @Column(name = "grace_period", nullable = false)
+    private Integer gracePeriod;
+
     @Column(name = "loan_amount")
     private BigDecimal loanAmount;
 
@@ -33,11 +36,18 @@ public class HpRegistration {
     @Column(name = "interest_rate")
     private String interestRate;
 
+    @Column(name = "late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal late_fee_rate;
+
+    @Column(name = "ninety_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal ninety_day_late_fee_rate;
+
+    @Column(name = "one_hundred_and_eighty_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
+    private BigDecimal one_hundred_and_eighty_late_fee_rate;
+
     @Column(name = "start_date")
     private LocalDateTime startDate;
 
-    @Column(name = "end_date")
-    private LocalDateTime endDate;
 
     @StatusConverter
     @Column(name = "status")

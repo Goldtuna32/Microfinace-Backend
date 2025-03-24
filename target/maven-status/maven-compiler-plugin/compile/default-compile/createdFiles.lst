@@ -71,13 +71,11 @@ com\sme\service\impl\HpProductServiceImpl.class
 com\sme\service\HolidayService.class
 com\sme\entity\Role.class
 com\sme\entity\User.class
-com\sme\service\impl\AutoPayServiceImpl.class
 com\sme\service\CollateralService.class
 com\sme\repository\SmeLoanRegistrationRepository.class
 com\sme\service\HpScheduleService.class
 com\sme\service\impl\CurrentAccountServiceImpl.class
 com\sme\service\BranchService.class
-com\sme\service\AutoPaymentService.class
 com\sme\repository\SmeLoanCollateralRepository.class
 com\sme\service\impl\DealerRegistrationServiceImpl.class
 com\sme\entity\ProductType.class

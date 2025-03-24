@@ -51,7 +51,9 @@ public class RepaymentScheduleServiceImpl implements RepaymentScheduleService {
 
         for (int i = 1; i <= repaymentPeriod; i++) {
             LocalDate dueDate = startDate.plusMonths(i);
-            int daysInMonth = dueDate.lengthOfMonth();
+            // Calculate days based on the previous month (where interest actually accrued)
+            LocalDate interestPeriodDate = dueDate.minusMonths(1);
+            int daysInMonth = interestPeriodDate.lengthOfMonth();
 
             // Interest is calculated based on the REMAINING PRINCIPAL
             BigDecimal interestAmount = remainingBalance.multiply(dailyInterestRate)

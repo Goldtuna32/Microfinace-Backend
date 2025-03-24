@@ -50,7 +50,7 @@ public class HpSchedule {
     private Long hpRegistrationId;
 
     @Column(name = "late_fee_paid_date")
-    private LocalDateTime lateFeePaidDate;
+    private LocalDate lateFeePaidDate;
 
     @StatusConverter
     @Column(name = "status", nullable = false)

@@ -5,6 +5,8 @@ import lombok.Data;
 
 import java.sql.Timestamp;
 
+import com.sme.annotation.StatusConverter;
+
 @Entity
 @Data
 @Table(name = "hp_repayment_transaction")
@@ -42,5 +44,9 @@ public class HpRepaymentTransaction {
 
     @Column(name = "current_account_id", nullable = false)
     private Long currentAccountId;
+
+    @StatusConverter
+    @Column(name = "status", nullable = false)
+    private Integer status;
 
  }

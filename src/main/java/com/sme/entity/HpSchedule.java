@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Date;
+
 
 import com.sme.annotation.StatusConverter;
 
@@ -40,8 +38,14 @@ public class HpSchedule {
     @Column(name = "principal_od")
     private BigDecimal principalOd;
 
+    @Column(name = "principalLateFeePaidDate")
+    private LocalDate principalLateFeePaidDate;
+
     @Column(name = "interest_od")
     private BigDecimal interestOd;
+
+    @Column(name = "interestLateFeePaidDate")
+    private LocalDate interestLateFeePaidDate;
 
     @Column(name = "installment_no")
     private String installmentNo;

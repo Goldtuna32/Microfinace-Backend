@@ -73,6 +73,7 @@ public class HirePurchaseAutoPayment implements AutoPaymentStrategy {
     private void processSchedules(List<HpSchedule> schedules, boolean isOverdue) {
         Map<Long, List<HpSchedule>> schedulesByRegistration = schedules.stream()
                 .filter(schedule -> !schedule.getInstallmentNo().equals("0"))  // Filter out the initial row
+                .filter(schedule -> schedule.getStatus() != 6)  // Filter out completed schedules
                 .collect(Collectors.groupingBy(HpSchedule::getHpRegistrationId));
         
         for (Map.Entry<Long, List<HpSchedule>> entry : schedulesByRegistration.entrySet()) {
@@ -257,22 +258,26 @@ public class HirePurchaseAutoPayment implements AutoPaymentStrategy {
         transaction.setPaidPrincipal("0");
 
         // 1. Interest Late Fee (for interest OD)
+        // In processIndividualSchedule method, update the interest late fee section:
         if (schedule.getInterestOd().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal interestLateFee = calculateInterestLateFee(schedule);
             BigDecimal paidAmount = processPayment(interestLateFee, remainingBalance);
             if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
                 transaction.setPaidInterestLateFee(paidAmount.toString());
                 remainingBalance = remainingBalance.subtract(paidAmount);
+                schedule.setInterestLateFeePaidDate(today); // Set the interest late fee paid date
             }
         }
-
+        
         // 2. Principal Late Fee (for principal OD)
+        // And in the principal late fee section:
         if (schedule.getPrincipalOd().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal principalLateFee = calculatePrincipalLateFee(schedule);
             BigDecimal paidAmount = processPayment(principalLateFee, remainingBalance);
             if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
                 transaction.setPaidPrincipalLateFee(paidAmount.toString());
                 remainingBalance = remainingBalance.subtract(paidAmount);
+                schedule.setPrincipalLateFeePaidDate(today); // Set the principal late fee paid date
             }
         }
 
@@ -373,8 +378,9 @@ public class HirePurchaseAutoPayment implements AutoPaymentStrategy {
 
     private BigDecimal calculateInterestLateFee(HpSchedule schedule) {
         LocalDate today = LocalDate.now();
-        LocalDate startDate = schedule.getLateFeePaidDate() != null ? 
-                            schedule.getLateFeePaidDate() : 
+        // First check general lateFeePaidDate, then specific interestLateFeePaidDate, finally dueDate
+        LocalDate startDate = schedule.getLateFeePaidDate() != null ? schedule.getLateFeePaidDate() :
+                            schedule.getInterestLateFeePaidDate() != null ? schedule.getInterestLateFeePaidDate() :
                             schedule.getDueDate();
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
 
@@ -406,8 +412,9 @@ public class HirePurchaseAutoPayment implements AutoPaymentStrategy {
 
     private BigDecimal calculatePrincipalLateFee(HpSchedule schedule) {
         LocalDate today = LocalDate.now();
-        LocalDate startDate = schedule.getLateFeePaidDate() != null ? 
-                            schedule.getLateFeePaidDate() : 
+        // First check general lateFeePaidDate, then specific principalLateFeePaidDate, finally dueDate
+        LocalDate startDate = schedule.getLateFeePaidDate() != null ? schedule.getLateFeePaidDate() :
+                            schedule.getPrincipalLateFeePaidDate() != null ? schedule.getPrincipalLateFeePaidDate() :
                             schedule.getDueDate();
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
 

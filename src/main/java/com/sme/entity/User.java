@@ -22,7 +22,7 @@ public class User {
     @Column(name = "email", nullable = false, length = 45, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 45)
+    @Column(name = "password", nullable = false, length = 255)
     private String password;
 
     @Column(name = "phone_number", nullable = false, length = 20)
@@ -44,6 +44,11 @@ public class User {
     @Column(name = "profile_picture", length = 255, nullable = true)
     private String profilePicture;
 
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+
+    @Column(name = "refresh_token", length = 255, nullable = true)
+    private String refreshToken;
 
 
     @ManyToOne

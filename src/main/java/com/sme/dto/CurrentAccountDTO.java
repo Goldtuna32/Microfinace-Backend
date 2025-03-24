@@ -31,5 +31,8 @@ public class CurrentAccountDTO {
         this.accountNumber = accountNumber;
         this.cifId = cifId;
     }
+
+    public CurrentAccountDTO(Long id, String accountNumber, BigDecimal balance, BigDecimal maximumBalance, BigDecimal minimumBalance, Integer status) {
+    }
 }
 

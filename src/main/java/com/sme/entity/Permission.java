@@ -16,7 +16,10 @@ public class Permission {
     private Long id;
 
     @Column(nullable = false, length = 45)
-    private String name;
+    private String name; // e.g., CREATE, READ, UPDATE, DELETE
+
+    @Column(name = "permission_function", nullable = false, length = 45) // Renamed from "function"
+    private String permissionFunction; // e.g., CREATE, READ, UPDATE, DELETE
 
     @Column(nullable = false, length = 255)
     private String description;
@@ -28,4 +31,8 @@ public class Permission {
     @OneToMany(mappedBy = "permission", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RolePermission> rolePermissions;
 
+    @PrePersist
+    protected void onCreate() {
+        createdAt = new Date();
+    }
 }

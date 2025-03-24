@@ -35,5 +35,8 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     @Query("SELECT b.branchCode FROM Branch b WHERE b.address.region = :region ORDER BY b.branchCode DESC LIMIT 1")
     String findLastBranchCodeByRegion(@Param("region") String region);
 
+    boolean existsByName(String Name);
+    boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsByEmail(String email);
 
 }

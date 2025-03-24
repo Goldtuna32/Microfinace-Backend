@@ -17,14 +17,17 @@ public interface CurrentAccountService {
     List<CurrentAccountDTO> getAllCurrentAccounts();
     Optional<CurrentAccountDTO> getCurrentAccountById(Long id);
     CurrentAccountDTO createCurrentAccount(CurrentAccountDTO accountDTO);
-    void deleteCurrentAccount(Long id);
+    boolean softDeleteCurrentAccount(Long id);
+    boolean restoreCurrentAccount(Long id);
+
+    CurrentAccountDTO updateCurrentAccount(Long id, CurrentAccountDTO accountDTO);
 
     boolean hasCurrentAccount(Long id);
 
-    List<CurrentAccountDTO> getCurrentAccountsByCifId(Long cifId);
+//    CurrentAccountDTO getCurrentAccountsByCifId(Long cifId);
 
     Page<CurrentAccountDTO> getAllCurrentAccountsPaginated(int page, int size);
 
-
+    CurrentAccountDTO getCurrentAccountByCifId(Long cifId);
 
 }

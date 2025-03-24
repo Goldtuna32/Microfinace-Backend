@@ -1,5 +1,6 @@
 package com.sme.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -14,7 +15,7 @@ public class AccountTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     @Column(name = "transaction_type", nullable = false, length = 45)
     private String transactionType;
@@ -36,6 +37,7 @@ public class AccountTransaction {
 
     @ManyToOne
     @JoinColumn(name = "current_account_id", nullable = false)
+    @JsonBackReference
     private CurrentAccount currentAccount;
 
 

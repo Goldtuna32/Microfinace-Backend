@@ -29,4 +29,9 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
     @Query("SELECT c.serialNumber FROM CIF c WHERE c.branch.branchCode = :branchCode ORDER BY c.serialNumber DESC LIMIT 1")
     String findLastCifCodeByBranchCode(@Param("branchCode") String branchCode);
 
+    boolean existsByName(String name);
+    boolean existsByNrcNumber(String nrcNumber);
+    boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsByEmail(String email);
+
 }

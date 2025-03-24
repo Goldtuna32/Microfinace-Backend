@@ -15,4 +15,6 @@ public interface AccountTransactionService {
     AccountTransaction createTransaction(AccountTransactionDTO transactionDTO);
 
     List<AccountTransactionDTO> getTransactionsByCurrentAccount(Long accountId);
+
+
 }

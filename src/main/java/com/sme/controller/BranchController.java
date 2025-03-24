@@ -3,6 +3,7 @@ package com.sme.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.dto.AddressDTO;
 import com.sme.dto.BranchDTO;
+import com.sme.repository.BranchRepository;
 import com.sme.service.BranchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +26,8 @@ public class BranchController {
     @Autowired
     private BranchService branchService;
 
-
+    @Autowired
+    private BranchRepository branchRepository;
 
     // Get all branches
     @GetMapping
@@ -82,5 +85,19 @@ public class BranchController {
 
         Page<BranchDTO> branches = branchService.getBranches(pageable, region, name, branchCode);
         return ResponseEntity.ok(branches);
+    }
+
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Map<String, Boolean>> checkDuplicate(
+            @RequestParam(required = false) String branchName,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String street) {
+        boolean isDuplicate = branchRepository.existsByName(branchName) ||
+                branchRepository.existsByPhoneNumber(phoneNumber) ||
+                branchRepository.existsByEmail(email);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isDuplicate", isDuplicate);
+        return ResponseEntity.ok(response);
     }
 }

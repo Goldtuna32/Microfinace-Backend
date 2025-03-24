@@ -99,7 +99,6 @@ public class CIFServiceImpl implements CIFService {
             String backNrcUrl = uploadImage(backNrc);
             cif.setBNrcPhotoUrl(backNrcUrl);
         }
-
         Branch branch = branchRepository.findById(cifDTO.getBranchId())
                 .orElseThrow(() -> new RuntimeException("Branch not found with ID: " + cifDTO.getBranchId()));
         cif.setBranch(branch);
@@ -112,23 +111,27 @@ public class CIFServiceImpl implements CIFService {
         return modelMapper.map(savedCIF, CIFDTO.class);
     }
 
-
     @Transactional
     public String generateSerialNumber(String branchCode) {
+        // Fetch the last CIF code for this branch
         String lastCifCode = cifRepository.findLastCifCodeByBranchCode(branchCode);
-         if (lastCifCode == null || lastCifCode.isEmpty()) {
+
+        if (lastCifCode == null || lastCifCode.isEmpty()) {
             return "CIF-" + branchCode + "-0001";
         }
 
         try {
-            int prefixLength = "CIF-".length() + branchCode.length() + 1;
-            int lastNumber = Integer.parseInt(lastCifCode.substring(prefixLength));
 
+            String[] parts = lastCifCode.split("-");
+            if (parts.length != 4) {
+                throw new IllegalArgumentException("Invalid CIF code format: " + lastCifCode);
+            }
+            int lastNumber = Integer.parseInt(parts[3]);
             int newNumber = lastNumber + 1;
+
             return "CIF-" + branchCode + "-" + String.format("%04d", newNumber);
-        } catch (NumberFormatException e) {
-            System.err.println("Error parsing CIF code: " + lastCifCode);
-            // Fallback to "0001" in case of parsing error
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error parsing CIF code: " + lastCifCode + ". Falling back to 0001.");
             return "CIF-" + branchCode + "-0001";
         }
     }

@@ -4,6 +4,9 @@ import com.sme.dto.AddressDTO;
 import com.sme.dto.BranchDTO;
 import com.sme.entity.Address;
 import com.sme.entity.Branch;
+import com.sme.exception.BranchCreationException;
+import com.sme.exception.BranchNotFoundException;
+import com.sme.exception.InvalidBranchCodeException;
 import com.sme.repository.AddressRepository;
 import com.sme.repository.BranchRepository;
 import com.sme.service.BranchService;
@@ -66,43 +69,43 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public String generateBranchCode(String region) {
         String regionCode = getRegionCode(region);
-        String lastBranchCode = branchRepository.findLastBranchCodeByRegion(region); // Updated repository method
+        String lastBranchCode = branchRepository.findLastBranchCodeByRegion(region);
 
         if (lastBranchCode == null || lastBranchCode.isEmpty()) {
             return regionCode + "-0001";
         }
 
         try {
-            // Extract the numeric part after the region code and hyphen
-            // Format: "{regionCode}-{number}", so skip regionCode length + 1 for the hyphen
             int prefixLength = regionCode.length() + 1;
             int lastNumber = Integer.parseInt(lastBranchCode.substring(prefixLength));
             int newNumber = lastNumber + 1;
-
-            // Format as a 4-digit string
             return regionCode + "-" + String.format("%04d", newNumber);
         } catch (NumberFormatException e) {
-            System.err.println("Error parsing branch code: " + lastBranchCode);
-            return regionCode + "-0001"; // Fallback to "0001" on error
+            throw new InvalidBranchCodeException(
+                    "Failed to parse branch code: " + lastBranchCode, e);
         }
     }
 
     @Override
     @Transactional
     public BranchDTO createBranch(BranchDTO branchDTO, AddressDTO addressDTO) {
-        Address address = modelMapper.map(addressDTO, Address.class);
-        addressRepository.save(address);
+        try {
+            Address address = modelMapper.map(addressDTO, Address.class);
+            addressRepository.save(address);
 
-        Branch branch = modelMapper.map(branchDTO, Branch.class);
-        branch.setAddress(address);
-        branch.setStatus(1);
-        branch.setCreatedDate(new Date());
-        branch.setUpdatedDate(new Date());
-        branch.setBranchCode(generateBranchCode(addressDTO.getRegion()));
+            Branch branch = modelMapper.map(branchDTO, Branch.class);
+            branch.setAddress(address);
+            branch.setStatus(1);
+            branch.setCreatedDate(new Date());
+            branch.setUpdatedDate(new Date());
+            branch.setBranchCode(generateBranchCode(addressDTO.getRegion()));
 
-        Branch savedBranch = branchRepository.save(branch);
-
-        return modelMapper.map(savedBranch, BranchDTO.class);
+            Branch savedBranch = branchRepository.save(branch);
+            return modelMapper.map(savedBranch, BranchDTO.class);
+        } catch (Exception e) {
+            throw new BranchCreationException(
+                    "Failed to create branch with name: " + branchDTO.getBranchName(), e);
+        }
     }
 
     @Override
@@ -116,6 +119,9 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public Optional<BranchDTO> getBranchById(Long id) {
         Optional<Branch> branch = branchRepository.findById(id);
+        if (branch.isEmpty()) {
+            throw new BranchNotFoundException(id);
+        }
         return branch.map(this::convertToDTO);
     }
 
@@ -123,7 +129,11 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public BranchDTO updateBranch(Long id, BranchDTO branchDTO) {
         Optional<Branch> optionalBranch = branchRepository.findById(id);
-        if (optionalBranch.isPresent()) {
+        if (!optionalBranch.isPresent()) {
+            throw new BranchNotFoundException(id);
+        }
+
+        try {
             Branch branch = optionalBranch.get();
             branch.setName(branchDTO.getBranchName());
             branch.setBranchCode(branchDTO.getBranchCode());
@@ -139,20 +149,23 @@ public class BranchServiceImpl implements BranchService {
                 address.setId(addressDTO.getId());
                 address.setDistrict(addressDTO.getDistrict());
                 address.setStreet(addressDTO.getStreet());
-
                 branch.setAddress(address);
             }
 
             Branch updatedBranch = branchRepository.save(branch);
             return convertToDTO(updatedBranch);
-        } else {
-            throw new RuntimeException("Branch not found with id: " + id);
+        } catch (Exception e) {
+            throw new BranchCreationException(
+                    "Failed to update branch with id: " + id, e);
         }
     }
 
     @Override
     @Transactional
     public void deleteBranch(Long id) {
+        if (!branchRepository.existsById(id)) {
+            throw new BranchNotFoundException(id);
+        }
         branchRepository.deleteById(id);
     }
 

@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -29,20 +30,20 @@ public class BranchController {
     @Autowired
     private BranchRepository branchRepository;
 
-    // Get all branches
+    @PreAuthorize("hasAuthority('BRANCH_READ')")
     @GetMapping
     public List<BranchDTO> getAllBranches() {
         return branchService.getAllBranches();
     }
 
-    // Get branch by ID
+    @PreAuthorize("hasAuthority('BRANCH_READ')")
     @GetMapping("/{id}")
     public ResponseEntity<BranchDTO> getBranchById(@PathVariable Long id) {
         Optional<BranchDTO> branch = branchService.getBranchById(id);
         return branch.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
     
-    // Create a new branch
+    @PreAuthorize("hasAuthority('BRANCH_CREATE')")
     @PostMapping
     public ResponseEntity<BranchDTO> createBranch(@RequestBody Map<String, Object> request) {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -55,19 +56,21 @@ public class BranchController {
         return ResponseEntity.ok(savedBranch);
     }
 
-    // Update an existing branch
+
+    @PreAuthorize("hasAuthority('BRANCH_UPDATE')")
     @PutMapping("/{id}")
     public ResponseEntity<BranchDTO> updateBranch(@PathVariable Long id, @RequestBody BranchDTO branchDTO) {
         return ResponseEntity.ok(branchService.updateBranch(id, branchDTO));
     }
 
-    // Delete a branch
+    @PreAuthorize("hasAuthority('BRANCH_DELETE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBranch(@PathVariable Long id) {
         branchService.deleteBranch(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAuthority('BRANCH_READ')")
     @GetMapping("/paged")
     public ResponseEntity<Page<BranchDTO>> getBranches(
             @RequestParam(defaultValue = "0") int page,
@@ -87,6 +90,7 @@ public class BranchController {
         return ResponseEntity.ok(branches);
     }
 
+    @PreAuthorize("hasAuthority('BRANCH_CREATE')")
     @GetMapping("/check-duplicate")
     public ResponseEntity<Map<String, Boolean>> checkDuplicate(
             @RequestParam(required = false) String branchName,

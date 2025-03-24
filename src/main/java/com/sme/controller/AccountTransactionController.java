@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Date;
 import java.util.List;
@@ -22,6 +23,7 @@ public class AccountTransactionController {
     @Autowired
     private AccountTransactionService transactionService;
 
+    @PreAuthorize("hasAuthority('TRANSACTION_CREATE')")
     @PostMapping
     public ResponseEntity<?> createTransaction(@RequestBody AccountTransactionDTO transactionDTO) {
         try {
@@ -31,6 +33,8 @@ public class AccountTransactionController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
+    @PreAuthorize("hasAuthority('TRANSACTION_READ')")
     @GetMapping("/current-account/{accountId}")
     public ResponseEntity<List<AccountTransactionDTO>> getTransactionsByCurrentAccount(@PathVariable Long accountId) {
         List<AccountTransactionDTO> transactions = transactionService.getTransactionsByCurrentAccount(accountId);

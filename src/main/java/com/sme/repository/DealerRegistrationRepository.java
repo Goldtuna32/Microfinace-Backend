@@ -11,5 +11,7 @@ public interface DealerRegistrationRepository extends JpaRepository<DealerRegist
   
      List<DealerRegistration> findByStatus(Integer status);
 
- 
+     boolean existsByCompanyName(String companyName);
+
+     boolean existsByPhoneNumber(String phoneNumber);
 }

@@ -29,5 +29,8 @@ public interface HpProductRepository extends JpaRepository<HpProduct, Long> {
     List<HpProduct> findByDealerRegistrationId(Long dealerRegistration);
 
 
+    boolean existsByNameAndDealerRegistrationId(String name, Long dealerRegistrationId);
+
+    boolean existsByName(String name);
 
 }

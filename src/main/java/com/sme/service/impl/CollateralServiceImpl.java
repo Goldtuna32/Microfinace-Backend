@@ -1,9 +1,11 @@
 package com.sme.service.impl;
 
 // Add this import
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.sme.exception.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,150 +68,166 @@ public class CollateralServiceImpl implements CollateralService {
 
     private String generateCollateralCode() {
         String prefix = "COL";
-
         String lastCollateralCode = collateralRepository.findTopByOrderByIdDesc()
                 .map(Collateral::getCollateralCode)
                 .orElse(null);
 
         if (lastCollateralCode == null) {
-            return prefix + "-" + "-0001";
+            return prefix + "-0001";
         }
 
         try {
             String[] parts = lastCollateralCode.split("-");
-            int lastNumber = Integer.parseInt(parts[2]);
-            return prefix +  "-" + String.format("%04d", lastNumber + 1);
-        } catch (Exception e) {
-            return prefix + "-"  + "-0001";
+            if (parts.length != 2) {
+                throw new InvalidCollateralCodeException(lastCollateralCode);
+            }
+            int lastNumber = Integer.parseInt(parts[1]);
+            return prefix + "-" + String.format("%04d", lastNumber + 1);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            throw new InvalidCollateralCodeException(
+                    "Error parsing collateral code: " + lastCollateralCode, e);
         }
     }
 
     @Transactional
     @Override
     public CollateralDTO createCollateral(CollateralDTO collateralDTO, MultipartFile frontPhoto,
-            MultipartFile backPhoto) throws IOException {
+                                          MultipartFile backPhoto) throws IOException {
+        // Validation
+        validateCollateralDTO(collateralDTO);
+
+        if (collateralDTO.getId() != null && collateralRepository.existsById(collateralDTO.getId())) {
+            throw new DuplicateCollateralException("ID: " + collateralDTO.getId());
+        }
+
         try {
-            // Add debug logging
-            System.out.println("Received DTO: " + collateralDTO);
-            System.out.println("CollateralTypeId: " + collateralDTO.getCollateralTypeId());
-
-            if (collateralDTO.getId() != null && collateralRepository.existsById(collateralDTO.getId())) {
-                throw new RuntimeException("Collateral with ID " + collateralDTO.getId() + " already exists!");
-            }
-
-            // First, fetch the required entities
             CIF cif = cifRepository.findById(collateralDTO.getCifId())
-                    .orElseThrow(() -> new RuntimeException("CIF not found with ID: " + collateralDTO.getCifId()));
+                    .orElseThrow(() -> new CIFNotFoundException(collateralDTO.getCifId()));
 
-            // Changed variable name to avoid conflict
-            // Updated method name to match DTO field
             CollateralType type = collateralTypeRepository.findById(collateralDTO.getCollateralTypeId())
                     .orElseThrow(() -> new RuntimeException(
                             "CollateralType not found with ID: " + collateralDTO.getCollateralTypeId()));
 
-            // Create and set up the collateral
             Collateral collateral = new Collateral();
             collateral.setValue(collateralDTO.getValue());
             collateral.setDescription(collateralDTO.getDescription());
-            collateral.setStatus(collateralDTO.getStatus());
+            collateral.setStatus(1); // Default active status
             collateral.setDate(new Date());
             collateral.setCollateralCode(generateCollateralCode());
             collateral.setCif(cif);
-            collateral.setCollateralType(type);  // Using the renamed variable
+            collateral.setCollateralType(type);
 
-            // Handle photos
             if (frontPhoto != null && !frontPhoto.isEmpty()) {
-                String frontPhotoUrl = uploadImage(frontPhoto);
-                collateral.setF_collateral_photo(frontPhotoUrl);
+                try {
+                    String frontPhotoUrl = uploadImage(frontPhoto);
+                    collateral.setF_collateral_photo(frontPhotoUrl);
+                } catch (IOException e) {
+                    throw new ImageUploadException("Failed to upload front collateral photo", e);
+                }
             }
 
             if (backPhoto != null && !backPhoto.isEmpty()) {
-                String backPhotoUrl = uploadImage(backPhoto);
-                collateral.setB_collateral_photo(backPhotoUrl);
+                try {
+                    String backPhotoUrl = uploadImage(backPhoto);
+                    collateral.setB_collateral_photo(backPhotoUrl);
+                } catch (IOException e) {
+                    throw new ImageUploadException("Failed to upload back collateral photo", e);
+                }
             }
 
-            // Add debug logging before save
-            System.out.println("Saving collateral with type: " + collateral.getCollateralType().getId());
-            collateral = collateralRepository.save(collateral);
-            return modelMapper.map(collateral, CollateralDTO.class);
-
+            Collateral savedCollateral = collateralRepository.save(collateral);
+            return modelMapper.map(savedCollateral, CollateralDTO.class);
         } catch (Exception e) {
-            e.printStackTrace(); // Add this for better error tracking
-            throw new RuntimeException("Error saving collateral: " + e.getMessage(), e);
+            throw new CollateralCreationException(
+                    "Failed to create collateral for CIF ID: " + collateralDTO.getCifId(), e);
         }
     }
+
+    private void validateCollateralDTO(CollateralDTO collateralDTO) {
+        // Required field validation
+        if (collateralDTO.getCifId() == null) {
+            throw new MissingRequiredFieldException("cifId");
+        }
+        if (collateralDTO.getCollateralTypeId() == null) {
+            throw new MissingRequiredFieldException("collateralTypeId");
+        }
+        if (collateralDTO.getValue() == null) {
+            throw new MissingRequiredFieldException("value");
+        }
+
+        // Value validation
+        if (collateralDTO.getValue().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidCollateralValueException(collateralDTO.getValue());
+        }
+
+        // Optional: Description length check (example)
+        if (collateralDTO.getDescription() != null && collateralDTO.getDescription().length() > 500) {
+            throw new CollateralValidationException("Description exceeds maximum length of 500 characters");
+        }
+    }
+
 
     private String uploadImage(MultipartFile file) throws IOException {
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             return uploadResult.get("secure_url").toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Error uploading image to Cloudinary: " + e.getMessage());
+        } catch (Exception e) {
+            throw new ImageUploadException("Failed to upload image to Cloudinary", e);
         }
     }
 
     @Override
     @Transactional
     public CollateralDTO updateCollateral(Long id, CollateralDTO collateralDTO, MultipartFile frontPhoto, MultipartFile backPhoto) throws IOException {
-        // Fetch the existing entity
         Collateral existingCollateral = collateralRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Collateral not found with ID: " + id));
+                .orElseThrow(() -> new CollateralNotFoundException(id));
 
-        System.out.println("Initial CIF ID: " + (existingCollateral.getCif() != null ? existingCollateral.getCif().getId() : "null"));
+        // Validation
+        validateCollateralDTO(collateralDTO);
 
-        String existingFCollateralPhoto = existingCollateral.getF_collateral_photo();
-        String existingBCollateralPhoto = existingCollateral.getB_collateral_photo();
+        try {
+            String existingFCollateralPhoto = existingCollateral.getF_collateral_photo();
+            String existingBCollateralPhoto = existingCollateral.getB_collateral_photo();
+            CIF originalCif = existingCollateral.getCif();
+            CollateralType originalCollateralType = existingCollateral.getCollateralType();
 
-        // Preserve original relationships
-        CIF originalCif = existingCollateral.getCif();
-        System.out.println("Original CIF captured: " + (originalCif != null ? originalCif.getId() : "null"));
+            if (collateralDTO.getValue() != null) {
+                existingCollateral.setValue(collateralDTO.getValue());
+            }
+            if (collateralDTO.getDescription() != null) {
+                existingCollateral.setDescription(collateralDTO.getDescription());
+            }
+            existingCollateral.setStatus(1);
 
-        CollateralType originalCollateralType = existingCollateral.getCollateralType();
+            if (frontPhoto != null && !frontPhoto.isEmpty()) {
+                deleteImage(existingCollateral.getF_collateral_photo());
+                String frontPhotoUrl = uploadImage(frontPhoto);
+                existingCollateral.setF_collateral_photo(frontPhotoUrl);
+            } else if (collateralDTO.getF_collateral_photo() != null && !collateralDTO.getF_collateral_photo().isEmpty()) {
+                existingCollateral.setF_collateral_photo(collateralDTO.getF_collateral_photo());
+            } else {
+                existingCollateral.setF_collateral_photo(existingFCollateralPhoto);
+            }
 
-        // Manually update fields from DTO (only the ones we want to change)
-        if (collateralDTO.getValue() != null) {
-            existingCollateral.setValue(collateralDTO.getValue());
+            if (backPhoto != null && !backPhoto.isEmpty()) {
+                deleteImage(existingCollateral.getB_collateral_photo());
+                String backPhotoUrl = uploadImage(backPhoto);
+                existingCollateral.setB_collateral_photo(backPhotoUrl);
+            } else if (collateralDTO.getB_collateral_photo() != null && !collateralDTO.getB_collateral_photo().isEmpty()) {
+                existingCollateral.setB_collateral_photo(collateralDTO.getB_collateral_photo());
+            } else {
+                existingCollateral.setB_collateral_photo(existingBCollateralPhoto);
+            }
+
+            existingCollateral.setCif(originalCif);
+            existingCollateral.setCollateralType(originalCollateralType);
+
+            Collateral updatedCollateral = collateralRepository.save(existingCollateral);
+            return modelMapper.map(updatedCollateral, CollateralDTO.class);
+        } catch (Exception e) {
+            throw new CollateralUpdateException(
+                    "Failed to update collateral with id: " + id, e);
         }
-        if (collateralDTO.getDescription() != null) {
-            existingCollateral.setDescription(collateralDTO.getDescription());
-        }
-        existingCollateral.setStatus(1); // Hardcoded as per your logic
-
-        // Handle front photo
-        if (frontPhoto != null && !frontPhoto.isEmpty()) {
-            deleteImage(existingCollateral.getF_collateral_photo());
-            String frontPhotoUrl = uploadImage(frontPhoto);
-            existingCollateral.setF_collateral_photo(frontPhotoUrl);
-        } else if (collateralDTO.getF_collateral_photo() != null && !collateralDTO.getF_collateral_photo().isEmpty()) {
-            existingCollateral.setF_collateral_photo(collateralDTO.getF_collateral_photo());
-        } else {
-            existingCollateral.setF_collateral_photo(existingFCollateralPhoto);
-        }
-
-        // Handle back photo
-        if (backPhoto != null && !backPhoto.isEmpty()) {
-            deleteImage(existingCollateral.getB_collateral_photo());
-            String backPhotoUrl = uploadImage(backPhoto);
-            existingCollateral.setB_collateral_photo(backPhotoUrl);
-        } else if (collateralDTO.getB_collateral_photo() != null && !collateralDTO.getB_collateral_photo().isEmpty()) {
-            existingCollateral.setB_collateral_photo(collateralDTO.getB_collateral_photo());
-        } else {
-            existingCollateral.setB_collateral_photo(existingBCollateralPhoto);
-        }
-
-        // Ensure relationships are intact (optional, but for safety)
-        existingCollateral.setCif(originalCif);
-        existingCollateral.setCollateralType(originalCollateralType);
-
-        System.out.println("Before save CIF ID: " + (existingCollateral.getCif() != null ? existingCollateral.getCif().getId() : "null"));
-
-        // Save the updated entity
-        Collateral updatedCollateral = collateralRepository.save(existingCollateral);
-        System.out.println("Saved CIF ID: " + (updatedCollateral.getCif() != null ? updatedCollateral.getCif().getId() : "null"));
-
-        // Map to DTO using ModelMapper (this direction should be safe)
-        CollateralDTO result = modelMapper.map(updatedCollateral, CollateralDTO.class);
-        return result;
     }
 
     private void deleteImage(String imageUrl) {
@@ -230,27 +248,35 @@ public class CollateralServiceImpl implements CollateralService {
     @Transactional
     @Override
     public boolean softDeleteCollateral(Long id) {
-        if (collateralRepository.existsById(id)) {
-            Collateral collateral = collateralRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Collateral not found with ID: " + id));
-            collateral.setStatus(2); // Set status to 2 (inactive)
+        if (!collateralRepository.existsById(id)) {
+            throw new CollateralNotFoundException(id);
+        }
+        try {
+            Collateral collateral = collateralRepository.findById(id).get();
+            collateral.setStatus(2);
             collateralRepository.save(collateral);
             return true;
+        } catch (Exception e) {
+            throw new CollateralUpdateException(
+                    "Failed to soft delete collateral with id: " + id, e);
         }
-        return false;
     }
 
     @Transactional
     @Override
     public boolean restoreCollateral(Long id) {
-        if (collateralRepository.existsById(id)) {
-            Collateral collateral = collateralRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Collateral not found with ID: " + id));
-            collateral.setStatus(1); // Set status to 1 (active)
+        if (!collateralRepository.existsById(id)) {
+            throw new CollateralNotFoundException(id);
+        }
+        try {
+            Collateral collateral = collateralRepository.findById(id).get();
+            collateral.setStatus(1);
             collateralRepository.save(collateral);
             return true;
+        } catch (Exception e) {
+            throw new CollateralUpdateException(
+                    "Failed to restore collateral with id: " + id, e);
         }
-        return false;
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.sme.dto.HpScheduleDTO;
 import com.sme.service.HpScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,12 +16,14 @@ public class HpScheduleController {
     @Autowired
     private HpScheduleService hpScheduleService;
 
+    @PreAuthorize("hasRole('HP_SCHEDULE_GENERATE')")
     @PostMapping("/generate/{hpRegistrationId}")
     public ResponseEntity<List<HpScheduleDTO>> generateSchedule(@PathVariable Long hpRegistrationId) {
         List<HpScheduleDTO> schedules = hpScheduleService.generateHpRepaymentSchedule(hpRegistrationId);
         return ResponseEntity.ok(schedules);
     }
 
+    @PreAuthorize("hasRole('HP_SCHEDULE_READ')")
     @GetMapping("/list/{hpRegistrationId}")
     public ResponseEntity<List<HpScheduleDTO>> getSchedules(@PathVariable Long hpRegistrationId) {
         List<HpScheduleDTO> schedules = hpScheduleService.getHpSchedulesByHpRegistrationId(hpRegistrationId);

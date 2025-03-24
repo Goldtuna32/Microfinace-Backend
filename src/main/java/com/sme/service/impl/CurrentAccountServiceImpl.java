@@ -4,6 +4,7 @@ import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.Collateral;
 import com.sme.entity.CurrentAccount;
 import com.sme.entity.CIF;
+import com.sme.exception.*;
 import com.sme.repository.CurrentAccountRepository;
 import com.sme.repository.CIFRepository;
 import com.sme.service.CurrentAccountService;
@@ -58,39 +59,45 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         return accounts.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
-    // ✅ Get Current Account by ID
     @Override
+    @Transactional
     public Optional<CurrentAccountDTO> getCurrentAccountById(Long id) {
         Optional<CurrentAccount> account = currentAccountRepository.findById(id);
+        if (account.isEmpty()) {
+            throw new CurrentAccountNotFoundException(id);
+        }
         return account.map(this::convertToDTO);
     }
 
     @Override
     @Transactional
     public CurrentAccountDTO createCurrentAccount(CurrentAccountDTO accountDTO) {
-        if (accountDTO.getCifId() == null) {
-            throw new IllegalArgumentException("CIF ID must not be null.");
-        }
+        validateCurrentAccountDTO(accountDTO);
 
         CIF cif = cifRepository.findById(accountDTO.getCifId())
-                .orElseThrow(() -> new RuntimeException("CIF not found with ID: " + accountDTO.getCifId()));
+                .orElseThrow(() -> new CIFNotFoundException(accountDTO.getCifId()));
 
-        CurrentAccount account = new CurrentAccount();
-        account.setCif(cif);
-        account.setBalance(BigDecimal.ZERO);
-        account.setMinimumBalance(accountDTO.getMinimumBalance());
-        account.setMaximumBalance(accountDTO.getMaximumBalance());
-        account.setStatus(accountDTO.getStatus());
-        account.setDateCreated(new Date());
-        account.setHoldAmount(BigDecimal.ZERO);
+        try {
+            CurrentAccount account = new CurrentAccount();
+            account.setCif(cif);
+            account.setBalance(BigDecimal.ZERO);
+            account.setMinimumBalance(accountDTO.getMinimumBalance());
+            account.setMaximumBalance(accountDTO.getMaximumBalance());
+            account.setStatus(1); // Default to active
+            account.setDateCreated(new Date());
+            account.setHoldAmount(BigDecimal.ZERO);
 
-        // Generate and set the account number
-        String accountNumber = generateAccountNumber(cif.getBranch().getBranchCode());
-        account.setAccountNumber(accountNumber);
+            String accountNumber = generateAccountNumber(cif.getBranch().getBranchCode());
+            account.setAccountNumber(accountNumber);
 
-        CurrentAccount savedAccount = currentAccountRepository.save(account);
-        return convertToDTO(savedAccount);
+            CurrentAccount savedAccount = currentAccountRepository.save(account);
+            return convertToDTO(savedAccount);
+        } catch (Exception e) {
+            throw new CurrentAccountCreationException(
+                    "Failed to create current account for CIF ID: " + accountDTO.getCifId(), e);
+        }
     }
+
 
     @Transactional
     public String generateAccountNumber(String branchCode) {
@@ -103,76 +110,84 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         try {
             String[] parts = lastAccountNumber.split("-");
             if (parts.length != 4) {
-                throw new IllegalArgumentException("Invalid account number format: " + lastAccountNumber);
+                throw new InvalidAccountNumberException(lastAccountNumber);
             }
 
             int lastNumber = Integer.parseInt(parts[3]);
             int newNumber = lastNumber + 1;
             return "CA-" + branchCode + "-" + String.format("%04d", newNumber);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Error parsing account number: " + lastAccountNumber + ". Falling back to 0001.");
-            return "CA-" + branchCode + "-0001";
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            throw new InvalidAccountNumberException(
+                    "Error parsing account number: " + lastAccountNumber, e);
         }
     }
 
     @Override
+    @Transactional
     public CurrentAccountDTO getCurrentAccountByCifId(Long cifId) {
         if (cifId == null) {
-            throw new IllegalArgumentException("CIF ID cannot be null");
+            throw new MissingRequiredFieldException("cifId");
         }
 
         CurrentAccount currentAccount = currentAccountRepository.findByCifId(cifId)
-                .orElseThrow(() -> new IllegalArgumentException("Current account not found for CIF ID: " + cifId));
-
+                .orElseThrow(() -> new CurrentAccountNotFoundException(
+                        "Current account not found for CIF ID: " + cifId));
         return modelMapper.map(currentAccount, CurrentAccountDTO.class);
     }
 
     @Override
+    @Transactional
     public CurrentAccountDTO updateCurrentAccount(Long id, CurrentAccountDTO accountDTO) {
         CurrentAccount existingAccount = currentAccountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
+                .orElseThrow(() -> new CurrentAccountNotFoundException(id));
 
-        // Only update maximumBalance and minimumBalance
-        existingAccount.setMaximumBalance(accountDTO.getMaximumBalance());
-        existingAccount.setMinimumBalance(accountDTO.getMinimumBalance());
+        validateUpdateCurrentAccountDTO(accountDTO);
 
-        // Validate that minimumBalance is not greater than maximumBalance
-        if (existingAccount.getMinimumBalance().compareTo(existingAccount.getMaximumBalance()) > 0) {
-            throw new IllegalArgumentException("Minimum balance cannot be greater than maximum balance.");
+        try {
+            existingAccount.setMaximumBalance(accountDTO.getMaximumBalance());
+            existingAccount.setMinimumBalance(accountDTO.getMinimumBalance());
+
+            CurrentAccount updatedAccount = currentAccountRepository.save(existingAccount);
+            return convertToDTO(updatedAccount);
+        } catch (Exception e) {
+            throw new CurrentAccountUpdateException(
+                    "Failed to update current account with id: " + id, e);
         }
-
-        CurrentAccount updatedAccount = currentAccountRepository.save(existingAccount);
-        return convertToDTO(updatedAccount);
     }
-
-
 
     @Transactional
     @Override
     public boolean softDeleteCurrentAccount(Long id) {
-        if (currentAccountRepository.existsById(id)) {
-            CurrentAccount currentAccount = currentAccountRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
+        if (!currentAccountRepository.existsById(id)) {
+            throw new CurrentAccountNotFoundException(id);
+        }
+        try {
+            CurrentAccount currentAccount = currentAccountRepository.findById(id).get();
             currentAccount.setStatus(2);
             currentAccountRepository.save(currentAccount);
             return true;
+        } catch (Exception e) {
+            throw new CurrentAccountUpdateException(
+                    "Failed to soft delete current account with id: " + id, e);
         }
-        return false;
     }
 
     @Transactional
     @Override
     public boolean restoreCurrentAccount(Long id) {
-        if (currentAccountRepository.existsById(id)) {
-            CurrentAccount currentAccount = currentAccountRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Current Account not found with ID: " + id));
-            currentAccount.setStatus(1); // Set status to 1 (active)
+        if (!currentAccountRepository.existsById(id)) {
+            throw new CurrentAccountNotFoundException(id);
+        }
+        try {
+            CurrentAccount currentAccount = currentAccountRepository.findById(id).get();
+            currentAccount.setStatus(1);
             currentAccountRepository.save(currentAccount);
             return true;
+        } catch (Exception e) {
+            throw new CurrentAccountUpdateException(
+                    "Failed to restore current account with id: " + id, e);
         }
-        return false;
     }
-
 
 
     public boolean hasCurrentAccount(Long cifId) {
@@ -184,5 +199,46 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
         Page<CurrentAccount> accountPage = currentAccountRepository.findAll(pageable);
         return accountPage.map(this::convertToDTO);
+    }
+
+    private void validateCurrentAccountDTO(CurrentAccountDTO accountDTO) {
+        if (accountDTO.getCifId() == null) {
+            throw new MissingRequiredFieldException("cifId");
+        }
+        if (accountDTO.getMinimumBalance() == null) {
+            throw new MissingRequiredFieldException("minimumBalance");
+        }
+        if (accountDTO.getMaximumBalance() == null) {
+            throw new MissingRequiredFieldException("maximumBalance");
+        }
+
+        if (accountDTO.getMinimumBalance().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidBalanceValueException("minimumBalance", accountDTO.getMinimumBalance());
+        }
+        if (accountDTO.getMaximumBalance().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidBalanceValueException("maximumBalance", accountDTO.getMaximumBalance());
+        }
+        if (accountDTO.getMinimumBalance().compareTo(accountDTO.getMaximumBalance()) > 0) {
+            throw new InvalidBalanceRangeException(accountDTO.getMinimumBalance(), accountDTO.getMaximumBalance());
+        }
+    }
+
+    private void validateUpdateCurrentAccountDTO(CurrentAccountDTO accountDTO) {
+        if (accountDTO.getMinimumBalance() == null) {
+            throw new MissingRequiredFieldException("minimumBalance");
+        }
+        if (accountDTO.getMaximumBalance() == null) {
+            throw new MissingRequiredFieldException("maximumBalance");
+        }
+
+        if (accountDTO.getMinimumBalance().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidBalanceValueException("minimumBalance", accountDTO.getMinimumBalance());
+        }
+        if (accountDTO.getMaximumBalance().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidBalanceValueException("maximumBalance", accountDTO.getMaximumBalance());
+        }
+        if (accountDTO.getMinimumBalance().compareTo(accountDTO.getMaximumBalance()) > 0) {
+            throw new InvalidBalanceRangeException(accountDTO.getMinimumBalance(), accountDTO.getMaximumBalance());
+        }
     }
 }

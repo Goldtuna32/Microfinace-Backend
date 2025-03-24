@@ -4,12 +4,15 @@ import com.sme.dto.LoanRegistrationRequest;
 import com.sme.dto.SmeLoanCollateralDTO;
 import com.sme.dto.SmeLoanRegistrationDTO;
 import com.sme.entity.*;
+import com.sme.exception.*;
 import com.sme.repository.*;
 import com.sme.service.RepaymentScheduleService;
 import com.sme.service.SmeLoanRegistrationService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +50,8 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     @Override
     @Transactional
     public SmeLoanRegistrationDTO registerLoan(LoanRegistrationRequest request) {
-        System.out.println("Received Request: " + request);
+        validateLoanRequest(request);
+
         SmeLoanRegistration loan = new SmeLoanRegistration();
         SmeLoanRegistrationDTO loanDTO = request.getLoan();
         loan.setLoanAmount(loanDTO.getLoanAmount());
@@ -56,30 +60,25 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         loan.setRepaymentDuration(loanDTO.getRepaymentDuration());
         loan.setDocumentFee(loanDTO.getDocumentFee());
         loan.setServiceCharges(loanDTO.getServiceCharges());
-        loan.setStatus(loanDTO.getStatus());
+        loan.setStatus(loanDTO.getStatus() != null ? loanDTO.getStatus() : 3); // Default to pending (3)
         loan.setDueDate(loanDTO.getDueDate());
         loan.setRepaymentStartDate(loanDTO.getRepaymentStartDate());
 
-        Long currentAccountId = loanDTO.getCurrentAccountId();
-        if (currentAccountId == null) {
-            throw new IllegalArgumentException("CurrentAccount ID is required.");
-        }
-        CurrentAccount currentAccount = currentAccountRepository.findById(currentAccountId)
-                .orElseThrow(() -> new IllegalArgumentException("CurrentAccount not found with ID: " + currentAccountId));
+        String serialCode = generateSerialCode(loanDTO.getCurrentAccountId());
+        loan.setSerialCode(serialCode);
+
+        CurrentAccount currentAccount = currentAccountRepository.findById(loanDTO.getCurrentAccountId())
+                .orElseThrow(() -> new CurrentAccountNotFoundException(loanDTO.getCurrentAccountId()));
         loan.setCurrentAccount(currentAccount);
 
-        // Create collaterals without setting smeLoan yet
         List<SmeLoanCollateral> loanCollaterals = request.getCollaterals().stream()
                 .map(dto -> {
-                    if (dto.getCollateralId() == null) {
-                        throw new IllegalArgumentException("Collateral ID is required.");
-                    }
+                    Collateral collateral = collateralRepository.findById(dto.getCollateralId())
+                            .orElseThrow(() -> new CollateralNotFoundException(dto.getCollateralId()));
                     SmeLoanCollateral coll = new SmeLoanCollateral();
                     coll.setCollateralAmount(dto.getCollateralAmount());
-                    Collateral collateral = collateralRepository.findById(dto.getCollateralId())
-                            .orElseThrow(() -> new IllegalArgumentException("Collateral not found with ID: " + dto.getCollateralId()));
                     coll.setCollateral(collateral);
-                    return coll; // Don’t set smeLoan here
+                    return coll;
                 })
                 .collect(Collectors.toList());
 
@@ -88,27 +87,43 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (loan.getLoanAmount().compareTo(totalCollateralAmount) > 0) {
-            throw new IllegalArgumentException("Loan amount cannot exceed total collateral amount.");
+            throw new InvalidLoanAmountException(
+                    "Loan amount (" + loan.getLoanAmount() + ") cannot exceed total collateral amount (" + totalCollateralAmount + ")");
         }
 
-        // Save the loan first to get its ID
-        SmeLoanRegistration savedLoan = smeLoanRegistrationRepository.save(loan);
-
-        // Now set the smeLoan reference and save collaterals
-        for (SmeLoanCollateral coll : loanCollaterals) {
-            coll.setSmeLoan(savedLoan);
-            smeLoanCollateralRepository.save(coll);
+        try {
+            SmeLoanRegistration savedLoan = smeLoanRegistrationRepository.save(loan);
+            for (SmeLoanCollateral coll : loanCollaterals) {
+                coll.setSmeLoan(savedLoan);
+                smeLoanCollateralRepository.save(coll);
+            }
+            return mapToDTO(savedLoan.getId());
+        } catch (Exception e) {
+            throw new LoanCreationException(
+                    "Failed to register loan for current account ID: " + loanDTO.getCurrentAccountId(), e);
         }
+    }
 
-        return mapToDTO(savedLoan.getId());
+    private String generateSerialCode(Long currentAccountId) {
+        CurrentAccount account = currentAccountRepository.findById(currentAccountId)
+                .orElseThrow(() -> new CurrentAccountNotFoundException(currentAccountId));
+        String accountNumber = account.getAccountNumber(); // Assume this field exists
+
+        Long loanCount = smeLoanRegistrationRepository.countByCurrentAccountId(currentAccountId);
+        Long nextNumber = loanCount + 1;
+        String formattedNumber = String.format("%06d", nextNumber);
+
+        return "SML-" + accountNumber + "-" + formattedNumber;
     }
 
     @Override
+    @Transactional
     public SmeLoanRegistrationDTO updateLoan(Long id, SmeLoanRegistrationDTO dto) {
         SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Loan not found with ID: " + id));
+                .orElseThrow(() -> new LoanNotFoundException(id));
 
-        // Update editable fields
+        validateLoanDTO(dto);
+
         loan.setLoanAmount(dto.getLoanAmount());
         loan.setInterestRate(dto.getInterestRate());
         loan.setGracePeriod(dto.getGracePeriod());
@@ -118,54 +133,33 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         loan.setDueDate(dto.getDueDate());
         loan.setRepaymentStartDate(dto.getRepaymentStartDate());
 
-        // Fetch the CIF associated with the current account
         CurrentAccount currentAccount = currentAccountRepository.findById(loan.getCurrentAccount().getId())
-                .orElseThrow(() -> new IllegalArgumentException("CurrentAccount not found with ID: " + loan.getCurrentAccount().getId()));
+                .orElseThrow(() -> new CurrentAccountNotFoundException(loan.getCurrentAccount().getId()));
         CIF cif = currentAccount.getCif();
         if (cif == null) {
-            throw new IllegalStateException("No CIF associated with the current account.");
+            throw new LoanValidationException("No CIF associated with the current account.");
         }
 
-        // Fetch existing collaterals
         List<SmeLoanCollateral> existingCollaterals = smeLoanCollateralRepository.findBySmeLoanId(id);
-
-        // Convert existing collaterals to DTOs for comparison
-        List<SmeLoanCollateralDTO> existingCollateralDtos = existingCollaterals.stream()
-                .map(coll -> {
-                    SmeLoanCollateralDTO collDto = new SmeLoanCollateralDTO();
-                    collDto.setCollateralId(coll.getCollateral().getId());
-                    collDto.setCollateralAmount(coll.getCollateralAmount());
-                    collDto.setDescription(coll.getCollateral().getDescription());
-                    return collDto;
-                })
-                .collect(Collectors.toList());
-
-        // Prepare updated collaterals
         List<SmeLoanCollateral> updatedCollaterals = new ArrayList<>();
+
         for (SmeLoanCollateralDTO collDto : dto.getCollaterals()) {
-            if (collDto.getCollateralId() == null) {
-                throw new IllegalArgumentException("Collateral ID is required.");
-            }
             Collateral collateral = collateralRepository.findById(collDto.getCollateralId())
-                    .orElseThrow(() -> new IllegalArgumentException("Collateral not found with ID: " + collDto.getCollateralId()));
+                    .orElseThrow(() -> new CollateralNotFoundException(collDto.getCollateralId()));
 
-            // Validate collateral belongs to the CIF
             if (!collateral.getCif().getId().equals(cif.getId())) {
-                throw new IllegalArgumentException("Collateral ID " + collDto.getCollateralId() + " does not belong to the CIF associated with this loan.");
+                throw new CollateralMismatchException(collDto.getCollateralId(), cif.getId());
             }
 
-            // Find matching existing collateral by collateralId
             SmeLoanCollateral existingColl = existingCollaterals.stream()
                     .filter(coll -> coll.getCollateral().getId().equals(collDto.getCollateralId()))
                     .findFirst()
                     .orElse(null);
 
             if (existingColl != null) {
-                // Update existing collateral amount if changed
                 existingColl.setCollateralAmount(collDto.getCollateralAmount());
                 updatedCollaterals.add(existingColl);
             } else {
-                // Add new collateral
                 SmeLoanCollateral newColl = new SmeLoanCollateral();
                 newColl.setCollateralAmount(collDto.getCollateralAmount());
                 newColl.setCollateral(collateral);
@@ -174,28 +168,37 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
             }
         }
 
-        // Calculate total collateral amount
         BigDecimal totalCollateralAmount = updatedCollaterals.stream()
                 .map(coll -> coll.getCollateralAmount() == null ? BigDecimal.ZERO : coll.getCollateralAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (loan.getLoanAmount().compareTo(totalCollateralAmount) > 0) {
-            throw new IllegalArgumentException("Loan amount cannot exceed total collateral amount.");
+            throw new InvalidLoanAmountException(
+                    "Loan amount (" + loan.getLoanAmount() + ") cannot exceed total collateral amount (" + totalCollateralAmount + ")");
         }
 
-        // Identify collaterals to delete
-        List<SmeLoanCollateral> collateralsToDelete = existingCollaterals.stream()
-                .filter(existing -> updatedCollaterals.stream()
-                        .noneMatch(updated -> updated.getCollateral().getId().equals(existing.getCollateral().getId())))
-                .collect(Collectors.toList());
-        smeLoanCollateralRepository.deleteAll(collateralsToDelete);
+        try {
+            List<SmeLoanCollateral> collateralsToDelete = existingCollaterals.stream()
+                    .filter(existing -> updatedCollaterals.stream()
+                            .noneMatch(updated -> updated.getCollateral().getId().equals(existing.getCollateral().getId())))
+                    .collect(Collectors.toList());
+            smeLoanCollateralRepository.deleteAll(collateralsToDelete);
 
-        // Save updated and new collaterals
-        smeLoanCollateralRepository.saveAll(updatedCollaterals);
+            smeLoanCollateralRepository.saveAll(updatedCollaterals);
+            SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
+            return mapToDTO(updatedLoan.getId());
+        } catch (Exception e) {
+            throw new LoanUpdateException(
+                    "Failed to update loan with id: " + id, e);
+        }
+    }
 
-        // Save the updated loan
-        SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
-        return mapToDTO(updatedLoan.getId());
+
+
+    @Override
+    public Page<SmeLoanRegistrationDTO> getAllApprovedLoans(Pageable pageable) {
+        Page<SmeLoanRegistration> smeLoanRegistrationsPage = smeLoanRegistrationRepository.findAllPendingLoans(pageable);
+        return smeLoanRegistrationsPage.map(this::mapToDTO);
     }
 
     @Override
@@ -207,34 +210,31 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     }
 
     @Override
-    public List<SmeLoanRegistrationDTO> getApprovedLoans() {
-        return smeLoanRegistrationRepository.findByStatus(4) // Status 4 = Approved
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+    public Page<SmeLoanRegistrationDTO> getAllPendingLoans(Pageable pageable) {
+        Page<SmeLoanRegistration> smeLoanRegistrationsPage = smeLoanRegistrationRepository.findAllPendingLoans(pageable);
+        return smeLoanRegistrationsPage.map(this::mapToDTO);
     }
 
-    @Transactional
-    @Override
-    public SmeLoanRegistrationDTO approveLoan(Long id) {
-        // Fetch the loan by ID
-        SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Loan not found with ID: " + id));
 
-        // Check if the loan status is pending (status 3)
+    @Override
+    @Transactional
+    public SmeLoanRegistrationDTO approveLoan(Long id) {
+        SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(id)
+                .orElseThrow(() -> new LoanNotFoundException(id));
+
         if (loan.getStatus() != 3) {
-            throw new IllegalStateException("Only pending loans (status 3) can be approved.");
+            throw new InvalidStatusTransitionException(loan.getStatus(), 4);
         }
 
-        // Update the loan status to approved (status 4)
-        loan.setStatus(4);
-        SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
-
-        // Generate the repayment schedule for the approved loan
-        repaymentScheduleService.generateRepaymentSchedule(id);
-
-        // Map the updated loan to DTO and return
-        return mapToDTO(updatedLoan);
+        try {
+            loan.setStatus(4);
+            SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
+            repaymentScheduleService.generateRepaymentSchedule(id);
+            return mapToDTO(updatedLoan);
+        } catch (Exception e) {
+            throw new LoanUpdateException(
+                    "Failed to approve loan with id: " + id, e);
+        }
     }
 
     private SmeLoanRegistrationDTO mapToDTO(SmeLoanRegistration loan) {
@@ -243,7 +243,7 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
 
     private SmeLoanRegistrationDTO mapToDTO(Long loanId) {
         SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(loanId)
-                .orElseThrow(() -> new IllegalArgumentException("Loan not found with ID: " + loanId));
+                .orElseThrow(() -> new LoanNotFoundException(loanId));
 
         SmeLoanRegistrationDTO dto = new SmeLoanRegistrationDTO();
         dto.setId(loan.getId());
@@ -257,33 +257,28 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         dto.setDueDate(loan.getDueDate());
         dto.setRepaymentStartDate(loan.getRepaymentStartDate());
 
-
-        Long currentAccountId = loan.getCurrentAccount().getId();
-        CurrentAccount currentAccount = currentAccountRepository.findById(currentAccountId)
-                .orElseThrow(() -> new IllegalArgumentException("CurrentAccount not found with ID: " + currentAccountId));
+        CurrentAccount currentAccount = currentAccountRepository.findById(loan.getCurrentAccount().getId())
+                .orElseThrow(() -> new CurrentAccountNotFoundException(loan.getCurrentAccount().getId()));
         dto.setCurrentAccountId(currentAccount.getId());
         dto.setAccountNumber(currentAccount.getAccountNumber());
 
-
-        CIF cif = currentAccount.getCif();
-        if (cif != null) {
-            CIF finalCif = cif;
-            cif = cifRepository.findById(cif.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("CIF not found with ID: " + finalCif.getId()));
-            SmeLoanRegistrationDTO.CIFDTO cifDTO = new SmeLoanRegistrationDTO.CIFDTO();
-            cifDTO.setId(cif.getId());
-            cifDTO.setName(cif.getName());
-            cifDTO.setSerialNumber(cif.getSerialNumber());
-            cifDTO.setNrcNumber(cif.getNrcNumber());
-            cifDTO.setEmail(cif.getEmail());
-            dto.setCif(cifDTO);
-        }
+        CIF cif = new CIF();
+        CIF finalCif = cif;
+        cif = cifRepository.findById(cif.getId())
+                .orElseThrow(() -> new CIFNotFoundException(finalCif.getId()));
+        SmeLoanRegistrationDTO.CIFDTO cifDTO = new SmeLoanRegistrationDTO.CIFDTO();
+        cifDTO.setId(cif.getId());
+        cifDTO.setName(cif.getName());
+        cifDTO.setSerialNumber(cif.getSerialNumber());
+        cifDTO.setNrcNumber(cif.getNrcNumber());
+        cifDTO.setEmail(cif.getEmail());
+        dto.setCif(cifDTO);
 
         List<SmeLoanCollateral> collaterals = smeLoanCollateralRepository.findBySmeLoanId(loanId);
         List<SmeLoanCollateralDTO> collateralDTOs = collaterals.stream()
                 .map(coll -> {
                     Collateral collateral = collateralRepository.findById(coll.getCollateral().getId())
-                            .orElseThrow(() -> new IllegalArgumentException("Collateral not found with ID: " + coll.getCollateral().getId()));
+                            .orElseThrow(() -> new CollateralNotFoundException(coll.getCollateral().getId()));
                     SmeLoanCollateralDTO collDTO = new SmeLoanCollateralDTO();
                     collDTO.setCollateralId(collateral.getId());
                     collDTO.setCollateralAmount(coll.getCollateralAmount());
@@ -299,5 +294,58 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         dto.setTotalCollateralAmount(totalCollateralAmount);
 
         return dto;
+    }
+
+    private void validateLoanRequest(LoanRegistrationRequest request) {
+        if (request.getLoan() == null) {
+            throw new MissingRequiredFieldException("loan");
+        }
+        validateLoanDTO(request.getLoan());
+
+        if (request.getCollaterals() == null || request.getCollaterals().isEmpty()) {
+            throw new LoanValidationException("At least one collateral is required.");
+        }
+
+        for (SmeLoanCollateralDTO coll : request.getCollaterals()) {
+            if (coll.getCollateralId() == null) {
+                throw new MissingRequiredFieldException("collateralId");
+            }
+            if (coll.getCollateralAmount() == null) {
+                throw new MissingRequiredFieldException("collateralAmount");
+            }
+            if (coll.getCollateralAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidLoanAmountException(
+                        "Collateral amount must be positive: " + coll.getCollateralAmount());
+            }
+        }
+    }
+
+    private void validateLoanDTO(SmeLoanRegistrationDTO dto) {
+        if (dto.getCurrentAccountId() == null) {
+            throw new MissingRequiredFieldException("currentAccountId");
+        }
+        if (dto.getLoanAmount() == null) {
+            throw new MissingRequiredFieldException("loanAmount");
+        }
+        if (dto.getInterestRate() == null) {
+            throw new MissingRequiredFieldException("interestRate");
+        }
+        if (dto.getRepaymentDuration() == null) {
+            throw new MissingRequiredFieldException("repaymentDuration");
+        }
+
+        if (dto.getLoanAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidLoanAmountException("Loan amount must be positive: " + dto.getLoanAmount());
+        }
+        if (dto.getInterestRate().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidInterestRateException(dto.getInterestRate());
+        }
+        if (dto.getRepaymentDuration() <= 0) {
+            throw new LoanValidationException("Repayment duration must be positive: " + dto.getRepaymentDuration());
+        }
+
+        if (dto.getStatus() != null && dto.getStatus() != 3 && dto.getStatus() != 4) {
+            throw new LoanValidationException("Invalid initial status: " + dto.getStatus() + " (must be 3 or 4)");
+        }
     }
 }

@@ -1,10 +1,10 @@
 package com.sme.service.impl;
 
-import com.sme.dto.AddressDTO;
 import com.sme.dto.DealerRegistrationDTO;
 import com.sme.entity.Address;
 import com.sme.entity.CurrentAccount;
 import com.sme.entity.DealerRegistration;
+import com.sme.exception.*;
 import com.sme.repository.AddressRepository;
 import com.sme.repository.CurrentAccountRepository;
 import com.sme.repository.DealerRegistrationRepository;
@@ -12,6 +12,7 @@ import com.sme.service.DealerRegistrationService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,94 +34,87 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
     private CurrentAccountRepository currentAccountRepository;
 
     @Override
+    @Transactional
     public DealerRegistrationDTO createDealer(DealerRegistrationDTO dto) {
-        // Step 1: Save the Address first
-        Address address = modelMapper.map(dto.getAddress(), Address.class);
-        address = addressRepository.save(address);
+        validateDealerDTO(dto);
 
-        // Step 2: Retrieve the CurrentAccount
-        if (dto.getCurrentAccountId() != null) {
+        if (dto.getCompanyName() != null && dealerRepository.existsByCompanyName(dto.getCompanyName())) {
+            throw new DuplicateDealerException(dto.getCompanyName());
+        }
+
+        try {
+            Address address = modelMapper.map(dto.getAddress(), Address.class);
+            try {
+                address = addressRepository.save(address);
+            } catch (Exception e) {
+                throw new AddressPersistenceException(
+                        "Failed to save address for dealer: " + dto.getCompanyName(), e);
+            }
+
             CurrentAccount currentAccount = currentAccountRepository.findById(dto.getCurrentAccountId())
-                    .orElseThrow(() -> new RuntimeException("CurrentAccount not found"));
+                    .orElseThrow(() -> new CurrentAccountNotFoundException(dto.getCurrentAccountId()));
 
-            // Step 3: Create DealerRegistration and set the Address and CurrentAccount
             DealerRegistration dealer = modelMapper.map(dto, DealerRegistration.class);
-            dealer.setAddress(address); // Set the Address foreign key
-            dealer.setCurrentAccount(currentAccount); // Set the CurrentAccount foreign key
+            dealer.setAddress(address);
+            dealer.setCurrentAccount(currentAccount);
             dealer.setRegistrationDate(LocalDateTime.now());
+            dealer.setStatus(1); // Default to active
 
             dealer = dealerRepository.save(dealer);
-
-            // Step 4: Return the saved DealerRegistration as DTO
             return modelMapper.map(dealer, DealerRegistrationDTO.class);
-        } else {
-            throw new RuntimeException("CurrentAccount information is required");
+        } catch (Exception e) {
+            throw new DealerCreationException(
+                    "Failed to create dealer: " + dto.getCompanyName(), e);
         }
     }
 
+
+    @Override
+    @Transactional
+    public DealerRegistrationDTO updateDealer(Long id, DealerRegistrationDTO dto) {
+        DealerRegistration dealer = dealerRepository.findById(id)
+                .orElseThrow(() -> new DealerNotFoundException(id));
+
+        validateDealerDTO(dto);
+
+        // Check for duplicate company name, excluding current dealer
+        if (dto.getCompanyName() != null &&
+                !dto.getCompanyName().equals(dealer.getCompanyName()) &&
+                dealerRepository.existsByCompanyName(dto.getCompanyName())) {
+            throw new DuplicateDealerException(dto.getCompanyName());
+        }
+
+        try {
+            dealer.setCompanyName(dto.getCompanyName());
+            dealer.setPhoneNumber(dto.getPhoneNumber());
+            dealer.setStatus(dto.getStatus());
+
+            Address address = dealer.getAddress();
+            address.setStreet(dto.getAddress().getStreet());
+            address.setDistrict(dto.getAddress().getDistrict());
+            address.setTownship(dto.getAddress().getTownship());
+            try {
+                address = addressRepository.save(address);
+            } catch (Exception e) {
+                throw new AddressPersistenceException(
+                        "Failed to update address for dealer with id: " + id, e);
+            }
+
+            dealer.setAddress(address);
+            dealer = dealerRepository.save(dealer);
+            return modelMapper.map(dealer, DealerRegistrationDTO.class);
+        } catch (Exception e) {
+            throw new DealerUpdateException(
+                    "Failed to update dealer with id: " + id, e);
+        }
+    }
 
     @Override
     public DealerRegistrationDTO getDealer(Long id) {
         DealerRegistration dealer = dealerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Dealer not found"));
-        return convertToDTO(dealer);
+                .orElseThrow(() -> new DealerNotFoundException(id));
+        return modelMapper.map(dealer, DealerRegistrationDTO.class);
     }
-
-    @Override
-    public DealerRegistrationDTO updateDealer(Long id, DealerRegistrationDTO dto) {
-        DealerRegistration dealer = dealerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Dealer not found"));
-
-        // Update Dealer fields
-        dealer.setCompanyName(dto.getCompanyName());
-        dealer.setPhoneNumber(dto.getPhoneNumber());
-        dealer.setStatus(dto.getStatus());
-
-        // Update Address if needed
-        Address address = dealer.getAddress();
-        if (address == null) {
-            address = new Address();
-        }
-        address.setStreet(dto.getAddress().getStreet());
-        address.setDistrict(dto.getAddress().getDistrict());
-        address.setTownship(dto.getAddress().getTownship());
-
-        address = addressRepository.save(address); // Save updated Address
-        dealer.setAddress(address); // Link updated Address
-
-        dealer = dealerRepository.save(dealer); // Save updated DealerRegistration
-
-        return convertToDTO(dealer);
-    }
-
-    // Utility method to convert entity to DTO
-    private DealerRegistrationDTO convertToDTO(DealerRegistration dealer) {
-        DealerRegistrationDTO dto = new DealerRegistrationDTO();
-
-        dto.setId(dealer.getId());
-        dto.setCompanyName(dealer.getCompanyName());
-        dto.setPhoneNumber(dealer.getPhoneNumber());
-        dto.setRegistrationDate(dealer.getRegistrationDate());
-        dto.setStatus(dealer.getStatus());
-
-        // Map Address if it exists
-        if (dealer.getAddress() != null) {
-            AddressDTO addressDTO = new AddressDTO();
-            addressDTO.setStreet(dealer.getAddress().getStreet());
-            addressDTO.setDistrict(dealer.getAddress().getDistrict());
-            addressDTO.setTownship(dealer.getAddress().getTownship());
-            addressDTO.setRegion(dealer.getAddress().getRegion());
-            dto.setAddress(addressDTO);
-        }
-
-        // Map Current Account ID
-        if (dealer.getCurrentAccount() != null) {
-            dto.setCurrentAccountId(dealer.getCurrentAccount().getId());
-        }
-
-        return dto;
-    }
-
 
     @Override
     public List<DealerRegistrationDTO> getAllDealerRegistrations() {
@@ -132,6 +126,47 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
 
     @Override
     public void deleteDealer(Long id) {
-        dealerRepository.deleteById(id);
+        if (!dealerRepository.existsById(id)) {
+            throw new DealerNotFoundException(id);
+        }
+        try {
+            dealerRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new DealerUpdateException(
+                    "Failed to delete dealer with id: " + id, e);
+        }
+    }
+
+    private void validateDealerDTO(DealerRegistrationDTO dto) {
+        // Required field validation
+        if (dto.getCompanyName() == null || dto.getCompanyName().trim().isEmpty()) {
+            throw new MissingRequiredFieldException("companyName");
+        }
+        if (dto.getCurrentAccountId() == null) {
+            throw new MissingRequiredFieldException("currentAccountId");
+        }
+        if (dto.getAddress() == null) {
+            throw new MissingRequiredFieldException("address");
+        }
+        if (dto.getAddress().getStreet() == null || dto.getAddress().getStreet().trim().isEmpty()) {
+            throw new MissingRequiredFieldException("address.street");
+        }
+
+        // Phone number validation (example: 9-12 digits)
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().matches("\\d{9,12}")) {
+            throw new InvalidPhoneNumberException(dto.getPhoneNumber());
+        }
+
+        // Company name length validation (example: max 100 characters)
+        if (dto.getCompanyName().length() > 100) {
+            throw new DealerValidationException(
+                    "Company name exceeds maximum length of 100 characters");
+        }
+
+        // Status validation (if provided)
+        if (dto.getStatus() != null && (dto.getStatus() != 1 && dto.getStatus() != 2)) {
+            throw new DealerValidationException(
+                    "Invalid status value: " + dto.getStatus() + " (must be 1 or 2)");
+        }
     }
 }

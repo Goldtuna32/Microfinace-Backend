@@ -44,7 +44,7 @@ public class RepaymentScheduleServiceImpl implements RepaymentScheduleService {
         Integer gracePeriod = loan.getGracePeriod();
         LocalDate startDate = loan.getRepaymentStartDate().toLocalDate();
 
-        BigDecimal dailyInterestRate = interestRate.divide(BigDecimal.valueOf(365), 6, BigDecimal.ROUND_HALF_UP);
+        BigDecimal dailyInterestRate = interestRate.divide(BigDecimal.valueOf(365), 32, BigDecimal.ROUND_HALF_UP);
         BigDecimal remainingBalance = loanAmount; // Initial remaining principal
 
         List<RepaymentSchedule> schedules = new ArrayList<>();
@@ -103,7 +103,7 @@ public class RepaymentScheduleServiceImpl implements RepaymentScheduleService {
             if (schedule.getRemainingPrincipal().compareTo(BigDecimal.ZERO) > 0) {
                 int daysInMonth = schedule.getDueDate().lengthOfMonth();
                 BigDecimal dailyInterestRate = schedule.getSmeLoan().getInterestRate()
-                        .divide(BigDecimal.valueOf(100 * 365), 6, BigDecimal.ROUND_HALF_UP);
+                        .divide(BigDecimal.valueOf(100 * 365), 32, BigDecimal.ROUND_HALF_UP);
 
                 // Recalculate interest based on the new remaining principal
                 BigDecimal updatedInterest = newRemainingPrincipal.multiply(dailyInterestRate)

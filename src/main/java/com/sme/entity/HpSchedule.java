@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+import com.sme.annotation.StatusConverter;
+
 @Entity
 @Data
 @Table(name = "hp_schedule", schema = "mydb")
@@ -49,5 +51,9 @@ public class HpSchedule {
 
     @Column(name = "late_fee_paid_date")
     private LocalDateTime lateFeePaidDate;
+
+    @StatusConverter
+    @Column(name = "status", nullable = false)
+    private Integer status;
 
  }

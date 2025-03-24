@@ -96,15 +96,15 @@ public class HpScheduleServiceImpl implements HpScheduleService {
         BigDecimal remainingBalance = loanAmount;
         LocalDate currentDate = hpRegistration.getStartDate().toLocalDate();
 
-        // Add initial row
-        HpSchedule initialSchedule = new HpSchedule();
-        initialSchedule.setDueDate(currentDate);
-        initialSchedule.setGraceEndDate(currentDate.plusDays(hpRegistration.getGracePeriod()));
-        initialSchedule.setPrincipalAmount(loanAmount.longValue());
-        initialSchedule.setInterestAmount(0L);
-        initialSchedule.setInstallmentNo("0");
-        initialSchedule.setHpRegistrationId(hpRegistrationId);
-        schedules.add(initialSchedule);
+        // // Add initial row
+        // HpSchedule initialSchedule = new HpSchedule();
+        // initialSchedule.setDueDate(currentDate);
+        // initialSchedule.setGraceEndDate(currentDate.plusDays(hpRegistration.getGracePeriod()));
+        // initialSchedule.setPrincipalAmount(loanAmount.longValue());
+        // initialSchedule.setInterestAmount(0L);
+        // initialSchedule.setInstallmentNo("0");
+        // initialSchedule.setHpRegistrationId(hpRegistrationId);
+        // schedules.add(initialSchedule);
 
         // Generate schedule
         for (int i = 1; i <= loanTerm; i++) {
@@ -136,6 +136,7 @@ public class HpScheduleServiceImpl implements HpScheduleService {
             schedule.setInterestOd(BigDecimal.ZERO);
             schedule.setInstallmentNo(String.valueOf(i));
             schedule.setHpRegistrationId(hpRegistrationId);
+            schedule.setStatus(1);
             schedules.add(schedule);
         }
 

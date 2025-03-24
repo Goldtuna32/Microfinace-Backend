@@ -70,6 +70,7 @@ E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\HolidayRep
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\HpProductRepository.java
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\HpRegistrationRepository.java
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\HpScheduleRepository.java
+E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\HpTransactionRepository.java
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\ProductTypeRepository.java
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\RepaymentScheduleRepository.java
 E:\final Backend\Microfinace-Backend\src\main\java\com\sme\repository\RepaymentTransactionRepository.java

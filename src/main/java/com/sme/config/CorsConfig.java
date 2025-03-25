@@ -7,7 +7,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
-
 @Configuration
 public class CorsConfig {
 
@@ -15,24 +14,40 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        
-        // Allow all origins for development
-        config.addAllowedOrigin("http://localhost:4200");
-        
-        // Allow all HTTP methods
-        config.addAllowedMethod("*");
-        
-        // Allow all headers
-        config.addAllowedHeader("*");
-        
-        // Allow credentials
-        config.setAllowCredentials(true);
-        
-        // Apply this configuration to all paths
-        source.registerCorsConfiguration("/**", config);
-        config.setAllowCredentials(true);
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:4200",  // Angular Dev Server
+                "https://your-production-domain.com" // Production URL
+        ));
+
+
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        ));
+
+
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Cache-Control"
+        ));
+
+
+        config.setExposedHeaders(List.of(
+                "Authorization",
+                "Content-Disposition"
+        ));
+
+
+        config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Set-Cookie"));
+        config.setExposedHeaders(List.of("Authorization"));
+
+        config.setMaxAge(3600L);
+
+        source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
 }

@@ -1,6 +1,5 @@
 package com.sme.service.impl;
 
-import com.sme.config.DefaultPermissionsConfig;
 import com.sme.dto.PermissionDTO;
 import com.sme.dto.UserDTO;
 import com.sme.entity.*;
@@ -28,7 +27,6 @@ public class UserServiceImpl implements UserService {
     private final CloudinaryService cloudinaryService;
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
-    private final DefaultPermissionsConfig defaultPermissionsConfig;
     private final RolePermissionRepository rolePermissionRepository;
     private final UserPermissionRepository userPermissionRepository;
 
@@ -36,14 +34,13 @@ public class UserServiceImpl implements UserService {
     public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
                            BranchRepository branchRepository, CloudinaryService cloudinaryService,
                            PasswordEncoder passwordEncoder, PermissionRepository permissionRepository,
-                           DefaultPermissionsConfig defaultPermissionsConfig, RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
+                           RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
         this.cloudinaryService = cloudinaryService;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
-        this.defaultPermissionsConfig = defaultPermissionsConfig;
         this.rolePermissionRepository = rolePermissionRepository;
         this.userPermissionRepository = userPermissionRepository;
     }
@@ -84,65 +81,10 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
 
-        // Handle permissions
-        if (userDTO.getPermissions() != null && !userDTO.getPermissions().isEmpty()) {
-            userPermissionRepository.deleteByUserId(savedUser.getId()); // Clear existing user permissions
-            assignCustomUserPermissions(savedUser, userDTO.getPermissions());
-        } else {
-            assignDefaultPermissions(savedUser, savedUser.getRole());
-        }
-
-
         return mapToDTO(savedUser);
     }
 
-    private void assignDefaultPermissions(User user, Role role) {
-        List<String> defaultPermissions = defaultPermissionsConfig.getDefaultPermissionsForRole(role.getName());
-        List<RolePermission> existingPermissions = rolePermissionRepository.findByRoleId(role.getId());
-
-        for (String perm : defaultPermissions) {
-            String[] parts = perm.split("_");
-            if (parts.length != 2) continue;
-
-            // Check if permission already exists for this role
-            if (existingPermissions.stream().noneMatch(rp -> rp.getPermission().matches(perm))) {
-                Permission permission = permissionRepository.findByPermissionFunctionAndName(parts[0], parts[1])
-                        .orElseGet(() -> {
-                            Permission newPerm = new Permission();
-                            newPerm.setPermissionFunction(parts[0]);
-                            newPerm.setName(parts[1]);
-                            newPerm.setDescription(parts[1] + " permission for " + parts[0]);
-                            newPerm.setCreatedAt(new Date());
-                            return permissionRepository.save(newPerm);
-                        });
-
-                RolePermission rolePermission = new RolePermission();
-                rolePermission.setRole(role);
-                rolePermission.setPermission(permission);
-                rolePermissionRepository.save(rolePermission);
-            }
-        }
-    }
-
-    private void assignCustomUserPermissions(User user, List<PermissionDTO> permissions) {
-        for (PermissionDTO permDTO : permissions) {
-            Permission permission = permissionRepository.findByPermissionFunctionAndName(permDTO.getPermissionFunction(), permDTO.getName())
-                    .orElseGet(() -> {
-                        Permission newPerm = new Permission();
-                        newPerm.setPermissionFunction(permDTO.getPermissionFunction());
-                        newPerm.setName(permDTO.getName());
-                        newPerm.setDescription(permDTO.getDescription());
-                        newPerm.setCreatedAt(new Date());
-                        return permissionRepository.save(newPerm);
-                    });
-            UserPermission userPermission = new UserPermission();
-            userPermission.setUser(user);
-            userPermission.setPermission(permission);
-            userPermissionRepository.save(userPermission);
-        }
-    }
-
-    @Override
+       @Override
     public UserDTO getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -203,7 +145,6 @@ public class UserServiceImpl implements UserService {
         user.setBranch(branch);
 
         User updatedUser = userRepository.save(user);
-        assignDefaultPermissions(updatedUser, role); // Reassign permissions if role changes
         return mapToDTO(updatedUser);
     }
 

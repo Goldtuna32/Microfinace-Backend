@@ -56,6 +56,9 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         SmeLoanRegistrationDTO loanDTO = request.getLoan();
         loan.setLoanAmount(loanDTO.getLoanAmount());
         loan.setInterestRate(loanDTO.getInterestRate());
+        loan.setLate_fee_rate(loanDTO.getLate_fee_rate());
+        loan.setNinety_day_late_fee_rate(loanDTO.getNinety_day_late_fee_rate());
+        loan.setOne_hundred_and_eighty_late_fee_rate(loanDTO.getOne_hundred_and_eighty_day_late_fee_rate());
         loan.setGracePeriod(loanDTO.getGracePeriod());
         loan.setRepaymentDuration(loanDTO.getRepaymentDuration());
         loan.setDocumentFee(loanDTO.getDocumentFee());
@@ -197,7 +200,7 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
 
     @Override
     public Page<SmeLoanRegistrationDTO> getAllApprovedLoans(Pageable pageable) {
-        Page<SmeLoanRegistration> smeLoanRegistrationsPage = smeLoanRegistrationRepository.findAllPendingLoans(pageable);
+        Page<SmeLoanRegistration> smeLoanRegistrationsPage = smeLoanRegistrationRepository.findAllActiveLoans(pageable);
         return smeLoanRegistrationsPage.map(this::mapToDTO);
     }
 
@@ -242,47 +245,51 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     }
 
     private SmeLoanRegistrationDTO mapToDTO(Long loanId) {
+        if (loanId == null) {
+            throw new IllegalArgumentException("Loan ID must not be null");
+        }
+
         SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(loanId)
                 .orElseThrow(() -> new LoanNotFoundException(loanId));
 
         SmeLoanRegistrationDTO dto = new SmeLoanRegistrationDTO();
         dto.setId(loan.getId());
+        dto.setSerialCode(loan.getSerialCode()); // Added missing field
         dto.setLoanAmount(loan.getLoanAmount());
         dto.setInterestRate(loan.getInterestRate());
+        dto.setLate_fee_rate(loan.getLate_fee_rate());
+        dto.setNinety_day_late_fee_rate(loan.getNinety_day_late_fee_rate());
+        dto.setOne_hundred_and_eighty_day_late_fee_rate(loan.getOne_hundred_and_eighty_late_fee_rate());
         dto.setGracePeriod(loan.getGracePeriod());
-        dto.setRepaymentDuration((long) loan.getRepaymentDuration());
+        dto.setRepaymentDuration(loan.getRepaymentDuration()); // No need to cast to Long, already Long
         dto.setDocumentFee(loan.getDocumentFee());
         dto.setServiceCharges(loan.getServiceCharges());
         dto.setStatus(loan.getStatus());
         dto.setDueDate(loan.getDueDate());
         dto.setRepaymentStartDate(loan.getRepaymentStartDate());
 
+        // CurrentAccount handling
+        if (loan.getCurrentAccount() == null) {
+            throw new CurrentAccountNotFoundException("Current account is not associated with loan ID: " + loanId);
+        }
         CurrentAccount currentAccount = currentAccountRepository.findById(loan.getCurrentAccount().getId())
                 .orElseThrow(() -> new CurrentAccountNotFoundException(loan.getCurrentAccount().getId()));
         dto.setCurrentAccountId(currentAccount.getId());
         dto.setAccountNumber(currentAccount.getAccountNumber());
 
-        CIF cif = new CIF();
-        CIF finalCif = cif;
-        cif = cifRepository.findById(cif.getId())
-                .orElseThrow(() -> new CIFNotFoundException(finalCif.getId()));
-        SmeLoanRegistrationDTO.CIFDTO cifDTO = new SmeLoanRegistrationDTO.CIFDTO();
-        cifDTO.setId(cif.getId());
-        cifDTO.setName(cif.getName());
-        cifDTO.setSerialNumber(cif.getSerialNumber());
-        cifDTO.setNrcNumber(cif.getNrcNumber());
-        cifDTO.setEmail(cif.getEmail());
-        dto.setCif(cifDTO);
-
+        // Collateral handling
         List<SmeLoanCollateral> collaterals = smeLoanCollateralRepository.findBySmeLoanId(loanId);
         List<SmeLoanCollateralDTO> collateralDTOs = collaterals.stream()
                 .map(coll -> {
+                    if (coll.getCollateral() == null) {
+                        throw new CollateralNotFoundException("Collateral is not associated with loan collateral ID: " + coll.getId());
+                    }
                     Collateral collateral = collateralRepository.findById(coll.getCollateral().getId())
                             .orElseThrow(() -> new CollateralNotFoundException(coll.getCollateral().getId()));
                     SmeLoanCollateralDTO collDTO = new SmeLoanCollateralDTO();
                     collDTO.setCollateralId(collateral.getId());
                     collDTO.setCollateralAmount(coll.getCollateralAmount());
-                    collDTO.setDescription(coll.getCollateral().getDescription());
+                    collDTO.setDescription(collateral.getDescription());
                     return collDTO;
                 })
                 .collect(Collectors.toList());

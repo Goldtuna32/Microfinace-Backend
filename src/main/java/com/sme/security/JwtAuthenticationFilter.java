@@ -30,31 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String jwt = extractTokenFromCookies(request);
-        System.out.println("Extracted JWT: " + jwt); // Debugging
-
-        if (jwt != null) {
-            String username = jwtUtil.extractEmail(jwt);
-            System.out.println("Extracted Username: " + username); // Debugging
-
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-
-                if (jwtUtil.validateToken(jwt, userDetails)) {
-                    System.out.println("JWT is valid. Setting authentication context.");
-
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                } else {
-                    System.out.println("JWT is invalid or expired! Clearing cookie.");
-                    clearInvalidToken(response);
-                }
-            }
-        } else {
-            System.out.println("No JWT found in cookies.");
-        }
 
         filterChain.doFilter(request, response);
     }

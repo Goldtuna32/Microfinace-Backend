@@ -18,8 +18,8 @@ import java.util.function.Function;
 public class JwtUtil {
 
     private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private static final long EXPIRATION_TIME = 60 * 1000;
-    private static final long REFRESH_EXPIRATION_TIME =  120 * 1000;
+    private static final long EXPIRATION_TIME = 60 * 100000;
+    private static final long REFRESH_EXPIRATION_TIME =  120 * 10000;
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();

@@ -17,6 +17,8 @@ public interface CIFService {
     List<CIFDTO> getDeletedCIFS();
     List<CIFDTO> getAllCifs();
 
+    CIFDTO findCifByCurrentAccountId(Long currentAccountId);
+
     Optional<CIFDTO> getCIFById(Long id);
 
     CIFDTO createCIF(CIFDTO cifDTO, MultipartFile frontNrc, MultipartFile backNrc) throws IOException;

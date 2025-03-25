@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+    http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="SmeLoanReport" pageWidth="595" pageHeight="842"
+              columnWidth="535" leftMargin="30" rightMargin="30"
+              topMargin="20" bottomMargin="20">
+
+    <field name="id" class="java.lang.Long"/>
+    <field name="serialCode" class="java.lang.String"/>
+    <field name="loanAmount" class="java.math.BigDecimal"/>
+    <field name="interestRate" class="java.math.BigDecimal"/>
+    <field name="gracePeriod" class="java.lang.Integer"/>
+    <field name="repaymentDuration" class="java.lang.Long"/>
+    <field name="documentFee" class="java.math.BigDecimal"/>
+    <field name="serviceCharges" class="java.math.BigDecimal"/>
+    <field name="status" class="java.lang.Integer"/>
+    <field name="dueDate" class="java.sql.Timestamp"/>
+    <field name="repaymentStartDate" class="java.sql.Timestamp"/>
+    <field name="accountNumber" class="java.lang.String"/>
+    <field name="totalCollateralAmount" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="50">
+            <staticText>
+                <reportElement x="0" y="0" width="535" height="30"/>
+                <textElement textAlignment="Center">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <text><![CDATA[SME Loan Report]]></text>
+            </staticText>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="20">
+            <staticText>
+                <reportElement x="0" y="0" width="80" height="20"/>
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Loan ID]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="100" y="0" width="120" height="20"/>
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Serial Code]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="240" y="0" width="80" height="20"/>
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Amount]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="340" y="0" width="80" height="20"/>
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Interest Rate]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="20">
+            <textField>
+                <reportElement x="0" y="0" width="80" height="20"/>
+                <textFieldExpression><![CDATA[$F{id}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="100" y="0" width="120" height="20"/>
+                <textFieldExpression><![CDATA[$F{serialCode}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="240" y="0" width="80" height="20"/>
+                <textFieldExpression><![CDATA[$F{loanAmount}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="340" y="0" width="80" height="20"/>
+                <textFieldExpression><![CDATA[$F{interestRate}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+</jasperReport>

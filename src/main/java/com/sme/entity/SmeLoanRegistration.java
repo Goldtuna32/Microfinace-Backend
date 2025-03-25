@@ -70,5 +70,14 @@ public class SmeLoanRegistration {
 
     @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<SmeLoanCollateral> collaterals; // Always initialized
+    private List<SmeLoanCollateral> collaterals;
+
+    public BigDecimal getTotalCollateralAmount() {
+        if (collaterals == null || collaterals.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return collaterals.stream()
+                .map(loanCollateral -> loanCollateral.getCollateral().getValue()) // Assuming `Collateral` entity has `value`
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }// Always initialized
 }

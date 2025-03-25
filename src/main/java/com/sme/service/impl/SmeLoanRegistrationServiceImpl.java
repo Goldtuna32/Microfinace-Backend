@@ -50,12 +50,16 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     @Override
     @Transactional
     public SmeLoanRegistrationDTO registerLoan(LoanRegistrationRequest request) {
-        validateLoanRequest(request);
+        validateL oanRequest(request);
 
         SmeLoanRegistration loan = new SmeLoanRegistration();
         SmeLoanRegistrationDTO loanDTO = request.getLoan();
-        loan.setLoanAmount(loanDTO.getLoanAmount());
+
+        loan.setLoanAmount(loanDTO.getLoanAmount());     
         loan.setInterestRate(loanDTO.getInterestRate());
+        loan.setLate_fee_rate(loanDTO.getLate_fee_rate());
+        loan.setNinety_day_late_fee_rate(loanDTO.getNinety_day_late_fee_rate());
+        loan.setOne_hundred_and_eighty_late_fee_rate(loanDTO.getOne_hundred_and_eighty_day_late_fee_rate());
         loan.setGracePeriod(loanDTO.getGracePeriod());
         loan.setRepaymentDuration(loanDTO.getRepaymentDuration());
         loan.setDocumentFee(loanDTO.getDocumentFee());
@@ -67,10 +71,15 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         String serialCode = generateSerialCode(loanDTO.getCurrentAccountId());
         loan.setSerialCode(serialCode);
 
+        // Validate if Current Account exists
         CurrentAccount currentAccount = currentAccountRepository.findById(loanDTO.getCurrentAccountId())
                 .orElseThrow(() -> new CurrentAccountNotFoundException(loanDTO.getCurrentAccountId()));
         loan.setCurrentAccount(currentAccount);
 
+        // Step 1: Save Loan First
+        SmeLoanRegistration savedLoan = smeLoanRegistrationRepository.saveAndFlush(loan);
+
+        // Step 2: Map Collaterals after Loan is saved
         List<SmeLoanCollateral> loanCollaterals = request.getCollaterals().stream()
                 .map(dto -> {
                     Collateral collateral = collateralRepository.findById(dto.getCollateralId())
@@ -78,31 +87,18 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
                     SmeLoanCollateral coll = new SmeLoanCollateral();
                     coll.setCollateralAmount(dto.getCollateralAmount());
                     coll.setCollateral(collateral);
+                    coll.setSmeLoan(savedLoan); // ✅ Use savedLoan with ID
                     return coll;
                 })
                 .collect(Collectors.toList());
 
-        BigDecimal totalCollateralAmount = loanCollaterals.stream()
-                .map(coll -> coll.getCollateralAmount() == null ? BigDecimal.ZERO : coll.getCollateralAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Step 3: Save Collaterals
+        smeLoanCollateralRepository.saveAll(loanCollaterals);
 
-        if (loan.getLoanAmount().compareTo(totalCollateralAmount) > 0) {
-            throw new InvalidLoanAmountException(
-                    "Loan amount (" + loan.getLoanAmount() + ") cannot exceed total collateral amount (" + totalCollateralAmount + ")");
-        }
-
-        try {
-            SmeLoanRegistration savedLoan = smeLoanRegistrationRepository.save(loan);
-            for (SmeLoanCollateral coll : loanCollaterals) {
-                coll.setSmeLoan(savedLoan);
-                smeLoanCollateralRepository.save(coll);
-            }
-            return mapToDTO(savedLoan.getId());
-        } catch (Exception e) {
-            throw new LoanCreationException(
-                    "Failed to register loan for current account ID: " + loanDTO.getCurrentAccountId(), e);
-        }
+        return mapToDTO(savedLoan.getId());
     }
+
+
 
     private String generateSerialCode(Long currentAccountId) {
         CurrentAccount account = currentAccountRepository.findById(currentAccountId)

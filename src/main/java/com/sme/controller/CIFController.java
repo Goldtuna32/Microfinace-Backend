@@ -41,6 +41,13 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
+    @PreAuthorize("hasAuthority('CIF_READ')")
+    @GetMapping("/activeCIFS")
+    public ResponseEntity<List<CIFDTO>> getAllActiveCIFS() {
+        List<CIFDTO> cifList = cifService.getAllCifs();
+        return ResponseEntity.ok(cifList);
+    }
+
     @PreAuthorize("hasAuthority('CIF_CREATE')")
     @GetMapping("/check-duplicate")
     public ResponseEntity<Map<String, Boolean>> checkDuplicate(
@@ -164,5 +171,11 @@ public class CIFController {
         return cifService.restoreCIF(id)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();
+    }
+
+    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_READ')")
+    @GetMapping("/current-account/{currentAccountId}")
+    public ResponseEntity<CIFDTO> getCifByCurrentAccountId(@PathVariable Long currentAccountId) {
+        return ResponseEntity.ok(cifService.findCifByCurrentAccountId(currentAccountId));
     }
 }

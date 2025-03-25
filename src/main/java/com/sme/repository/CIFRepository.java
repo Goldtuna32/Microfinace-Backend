@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CIFRepository extends JpaRepository<CIF, Long> {
@@ -28,6 +29,8 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
 
     @Query("SELECT c.serialNumber FROM CIF c WHERE c.branch.branchCode = :branchCode ORDER BY c.serialNumber DESC LIMIT 1")
     String findLastCifCodeByBranchCode(@Param("branchCode") String branchCode);
+
+    Optional<CIF> findByCurrentAccountId(Long currentAccountId);
 
     boolean existsByName(String name);
     boolean existsByNrcNumber(String nrcNumber);

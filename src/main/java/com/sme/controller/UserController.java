@@ -86,17 +86,17 @@ public class UserController {
     }
 
 
-    @GetMapping("/current")
-    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).build();
-        }
-
-        // Principal is UserDetails (e.g., org.springframework.security.core.userdetails.User)
-        String email = authentication.getName(); // Email from JWT
-        UserDTO userDTO = userService.getCurrentUser(email);
-        return ResponseEntity.ok(userDTO);
-    }
+//    @GetMapping("/current")
+//    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
+//        if (authentication == null || !authentication.isAuthenticated()) {
+//            return ResponseEntity.status(401).build();
+//        }
+//
+//        // Principal is UserDetails (e.g., org.springframework.security.core.userdetails.User)
+//        String email = authentication.getName(); // Email from JWT
+//        UserDTO userDTO = userService.getCurrentUser(email);
+//        return ResponseEntity.ok(userDTO);
+//    }
 
     // Add to UserController.java
     @GetMapping("/permissions")

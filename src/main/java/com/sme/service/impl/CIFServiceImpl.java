@@ -71,6 +71,30 @@ public class CIFServiceImpl implements CIFService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public CIFDTO findCifByCurrentAccountId(Long currentAccountId) {
+        CIF cif = cifRepository.findByCurrentAccountId(currentAccountId)
+                .orElseThrow(() -> new CIFNotFoundException("CIF not found for Current Account ID: " + currentAccountId));
+
+        CIFDTO dto = new CIFDTO();
+        dto.setId(cif.getId());
+        dto.setName(cif.getName());
+        dto.setSerialNumber(cif.getSerialNumber());
+        dto.setNrcNumber(cif.getNrcNumber());
+        dto.setDob(cif.getDob());
+        dto.setGender(cif.getGender());
+        dto.setPhoneNumber(cif.getPhoneNumber());
+        dto.setEmail(cif.getEmail());
+        dto.setAddress(cif.getAddress());
+        dto.setMaritalStatus(cif.getMaritalStatus());
+        dto.setOccupation(cif.getOccupation());
+        dto.setIncomeSource(cif.getIncomeSource());
+        dto.setCreatedAt(cif.getCreatedAt());
+        dto.setFNrcPhotoUrl(cif.getFNrcPhotoUrl());
+        dto.setBNrcPhotoUrl(cif.getBNrcPhotoUrl());
+        return dto;
+    }
+
 
 
     @Override

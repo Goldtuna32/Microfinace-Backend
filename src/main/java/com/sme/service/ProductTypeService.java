@@ -1,27 +1,14 @@
 package com.sme.service;
 
 import com.sme.dto.ProductTypeDTO;
-import com.sme.entity.ProductType;
-import com.sme.entity.Status;
-import com.sme.repository.ProductTypeRepository;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.stream.Collectors;
 
+import java.util.List;
 
 public interface ProductTypeService {
-
-
-    ProductTypeDTO createProductType(ProductTypeDTO productTypeDTO);
-
-    List<ProductTypeDTO> getAllActiveProductTypes();
-
+    List<ProductTypeDTO> getAllProductTypes();
     ProductTypeDTO getProductTypeById(Long id);
-
+    ProductTypeDTO createProductType(ProductTypeDTO productTypeDTO);
     ProductTypeDTO updateProductType(Long id, ProductTypeDTO productTypeDTO);
-
     void deleteProductType(Long id);
+    ProductTypeDTO restoreProductType(Long id);
 }

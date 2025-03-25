@@ -1,5 +1,6 @@
 package com.sme.entity;
 
+import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
@@ -16,4 +17,8 @@ public class CollateralType {
 
     @Column(nullable = false)
     private String name;
+
+    @StatusConverter
+    @Column(nullable = false, length = 45)
+    private Integer status;
 }

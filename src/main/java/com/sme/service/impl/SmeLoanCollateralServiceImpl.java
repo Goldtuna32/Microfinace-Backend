@@ -41,25 +41,25 @@ public class SmeLoanCollateralServiceImpl implements SmeLoanCollateralService {
         return dto;
     }
 
-    @Override
-    public List<SmeLoanCollateralDTO> getCollateralsForLoan(Long loanId) {
-        return loanCollateralRepository.findBySmeLoanId(loanId)
-                .stream()
-                .map(loanCollateral -> new SmeLoanCollateralDTO(
-                        loanCollateral.getId(),
-                        loanCollateral.getSmeLoan().getId(),
-                        loanCollateral.getCollateral().getId()))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SmeLoanCollateralDTO> getLoansForCollateral(Long collateralId) {
-        return loanCollateralRepository.findByCollateralId(collateralId)
-                .stream()
-                .map(loanCollateral -> new SmeLoanCollateralDTO(
-                        loanCollateral.getId(),
-                        loanCollateral.getSmeLoan().getId(),
-                        loanCollateral.getCollateral().getId()))
-                .collect(Collectors.toList());
-    }
+//    @Override
+//    public List<SmeLoanCollateralDTO> getCollateralsForLoan(Long loanId) {
+//        return loanCollateralRepository.findBySmeLoanId(loanId)
+//                .stream()
+//                .map(loanCollateral -> new SmeLoanCollateralDTO(
+//                        loanCollateral.getId(),
+//                        loanCollateral.getSmeLoan().getId(),
+//                        loanCollateral.getCollateral().getId()))
+//                .collect(Collectors.toList());
+//    }
+//
+//    @Override
+//    public List<SmeLoanCollateralDTO> getLoansForCollateral(Long collateralId) {
+//        return loanCollateralRepository.findByCollateralId(collateralId)
+//                .stream()
+//                .map(loanCollateral -> new SmeLoanCollateralDTO(
+//                        loanCollateral.getId(),
+//                        loanCollateral.getSmeLoan().getId(),
+//                        loanCollateral.getCollateral().getId()))
+//                .collect(Collectors.toList());
+//    }
 }

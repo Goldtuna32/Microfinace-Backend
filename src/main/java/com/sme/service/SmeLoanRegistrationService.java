@@ -1,5 +1,7 @@
 package com.sme.service;
 
+import com.sme.dto.CIFDTO;
+import com.sme.dto.LoanRegistrationRequest;
 import com.sme.dto.SmeLoanRegistrationDTO;
 import com.sme.entity.Collateral;
 import com.sme.entity.SmeLoanCollateral;
@@ -9,6 +11,8 @@ import com.sme.repository.SmeLoanRegistrationRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +24,19 @@ import java.util.stream.Collectors;
 
 public interface SmeLoanRegistrationService {
 
-    List<SmeLoanRegistrationDTO> getAllLoans();
-
     SmeLoanRegistrationDTO getLoanById(Long id);
 
-    SmeLoanRegistrationDTO createLoan(SmeLoanRegistrationDTO dto);
+    SmeLoanRegistrationDTO registerLoan(LoanRegistrationRequest request);
 
-    SmeLoanRegistration registerLoan(SmeLoanRegistration loan, List<SmeLoanCollateral> loanCollaterals);
+    List<SmeLoanRegistrationDTO> getPendingLoans();
+
+    SmeLoanRegistrationDTO updateLoan(Long id, SmeLoanRegistrationDTO dto);
+
+    Page<SmeLoanRegistrationDTO> getAllPendingLoans(Pageable pageable);
+
+    Page<SmeLoanRegistrationDTO> getAllApprovedLoans(Pageable pageable);
+
+    SmeLoanRegistrationDTO approveLoan(Long id);
 
 
 }

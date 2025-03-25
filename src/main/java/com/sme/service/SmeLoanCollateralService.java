@@ -19,7 +19,7 @@ public interface SmeLoanCollateralService {
 
     SmeLoanCollateralDTO linkCollateralToLoan(SmeLoanCollateralDTO dto);
 
-    List<SmeLoanCollateralDTO> getCollateralsForLoan(Long loanId);
-
-    List<SmeLoanCollateralDTO> getLoansForCollateral(Long collateralId);
+//    List<SmeLoanCollateralDTO> getCollateralsForLoan(Long loanId);
+//
+//    List<SmeLoanCollateralDTO> getLoansForCollateral(Long collateralId);
 }

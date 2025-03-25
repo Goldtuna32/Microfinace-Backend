@@ -22,13 +22,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface BranchService {
 
-    String generateBranchCode(String region, String township);
+    String generateBranchCode(String region);
 
     String getRegionCode(String region);
 
-    String getTownshipCode(String township);
-
-    Page<BranchDTO> getBranches(Pageable pageable);
+    Page<BranchDTO> getBranches(Pageable pageable, String region, String name, String branchCode);
 
     BranchDTO createBranch(BranchDTO branchDTO, AddressDTO addressDTO);
 

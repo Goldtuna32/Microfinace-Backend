@@ -7,6 +7,6 @@ import java.util.List;
 
 @Data
 public class LoanRegistrationRequest {
-    private SmeLoanRegistration loan;
-    private List<SmeLoanCollateral> collaterals;
+    private SmeLoanRegistrationDTO loan;
+    private List<SmeLoanCollateralDTO> collaterals;
 }

@@ -17,7 +17,7 @@ public class AddressController {
     @Autowired
     private AddressService addressService;
 
-    // Get all addresses
+
     @GetMapping
     public List<Address> getAllAddresses() {
         return addressService.getAllAddresses();

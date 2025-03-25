@@ -25,7 +25,7 @@ public class Branch {
     @Column(nullable = false, length = 45)
     private String phoneNumber;
 
-    @Column(nullable = false, length = 45)
+    @Column(nullable = false, length = 45, unique = true)
     private String email;
 
     @Temporal(TemporalType.TIMESTAMP)

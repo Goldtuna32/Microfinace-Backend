@@ -5,12 +5,15 @@ import com.cloudinary.utils.ObjectUtils;
 import com.sme.dto.CIFDTO;
 import com.sme.entity.Branch;
 import com.sme.entity.CIF;
+import com.sme.exception.*;
 import com.sme.repository.BranchRepository;
 import com.sme.repository.CIFRepository;
 import com.sme.service.CIFService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,11 +41,61 @@ public class CIFServiceImpl implements CIFService {
     private final Cloudinary cloudinary;
 
     @Override
-    public List<CIFDTO> getAllCIFs() {
-        return cifRepository.findByStatus(1).stream()
+    public Page<CIFDTO> getAllCIFs(Pageable pageable, String nrcPrefix) {
+        Page<CIF> cifPage = cifRepository.findActiveCIFs(nrcPrefix, pageable);
+        return cifPage.map(this::convertToDTO);
+    }
+
+    @Override
+    public Page<CIFDTO> getDeletedCIFs(Pageable pageable, String nrcPrefix) {
+        Page<CIF> cifPage = cifRepository.findDeletedCIFs(nrcPrefix, pageable);
+        return cifPage.map(this::convertToDTO);
+    }
+
+    private CIFDTO convertToDTO(CIF cif) {
+        return modelMapper.map(cif, CIFDTO.class);
+    }
+
+    @Override
+    public List<CIFDTO> getDeletedCIFS() {
+        List<CIF> cifs = cifRepository.findByStatus(2);
+        return cifs.stream()
                 .map(cif -> modelMapper.map(cif, CIFDTO.class))
                 .collect(Collectors.toList());
     }
+
+    public List<CIFDTO> getAllCifs() {
+        List<CIF> cifs = cifRepository.findAll();
+        return cifs.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public CIFDTO findCifByCurrentAccountId(Long currentAccountId) {
+        CIF cif = cifRepository.findByCurrentAccountId(currentAccountId)
+                .orElseThrow(() -> new CIFNotFoundException("CIF not found for Current Account ID: " + currentAccountId));
+
+        CIFDTO dto = new CIFDTO();
+        dto.setId(cif.getId());
+        dto.setName(cif.getName());
+        dto.setSerialNumber(cif.getSerialNumber());
+        dto.setNrcNumber(cif.getNrcNumber());
+        dto.setDob(cif.getDob());
+        dto.setGender(cif.getGender());
+        dto.setPhoneNumber(cif.getPhoneNumber());
+        dto.setEmail(cif.getEmail());
+        dto.setAddress(cif.getAddress());
+        dto.setMaritalStatus(cif.getMaritalStatus());
+        dto.setOccupation(cif.getOccupation());
+        dto.setIncomeSource(cif.getIncomeSource());
+        dto.setCreatedAt(cif.getCreatedAt());
+        dto.setFNrcPhotoUrl(cif.getFNrcPhotoUrl());
+        dto.setBNrcPhotoUrl(cif.getBNrcPhotoUrl());
+        return dto;
+    }
+
+
 
     @Override
     public Optional<CIFDTO> getCIFById(Long id) {
@@ -59,43 +112,74 @@ public class CIFServiceImpl implements CIFService {
     @Override
     @Transactional
     public CIFDTO createCIF(CIFDTO cifDTO, MultipartFile frontNrc, MultipartFile backNrc) throws IOException {
-        CIF cif = modelMapper.map(cifDTO, CIF.class);
-        cif.setCreatedAt(LocalDateTime.now());
-
-        if (frontNrc != null && !frontNrc.isEmpty()) {
-            String frontNrcUrl = uploadImage(frontNrc);
-            cif.setFNrcPhotoUrl(frontNrcUrl);
+        // Validation
+        validateCIFDTO(cifDTO);
+        if (cifDTO.getNrcNumber() != null && cifRepository.existsByNrcNumber(cifDTO.getNrcNumber())) {
+            throw new DuplicateCIFException(cifDTO.getNrcNumber());
         }
 
-        if (backNrc != null && !backNrc.isEmpty()) {
-            String backNrcUrl = uploadImage(backNrc);
-            cif.setBNrcPhotoUrl(backNrcUrl);
+        try {
+            CIF cif = modelMapper.map(cifDTO, CIF.class);
+            cif.setCreatedAt(LocalDateTime.now());
+
+            if (frontNrc != null && !frontNrc.isEmpty()) {
+                try {
+                    String frontNrcUrl = uploadImage(frontNrc);
+                    cif.setFNrcPhotoUrl(frontNrcUrl);
+                } catch (IOException e) {
+                    throw new ImageUploadException("Failed to upload front NRC image", e);
+                }
+            }
+
+            if (backNrc != null && !backNrc.isEmpty()) {
+                try {
+                    String backNrcUrl = uploadImage(backNrc);
+                    cif.setBNrcPhotoUrl(backNrcUrl);
+                } catch (IOException e) {
+                    throw new ImageUploadException("Failed to upload back NRC image", e);
+                }
+            }
+
+            Branch branch = branchRepository.findById(cifDTO.getBranchId())
+                    .orElseThrow(() -> new BranchNotFoundException(cifDTO.getBranchId()));
+            cif.setBranch(branch);
+            cif.setStatus(1);
+
+            String serialNumber = generateSerialNumber(branch.getBranchCode());
+            cif.setSerialNumber(serialNumber);
+
+            CIF savedCIF = cifRepository.save(cif);
+            return modelMapper.map(savedCIF, CIFDTO.class);
+        } catch (Exception e) {
+            throw new CIFCreationException(
+                    "Failed to create CIF for branch ID: " + cifDTO.getBranchId(), e);
+        }
+    }
+
+    @Transactional
+    public String generateSerialNumber(String branchCode) {
+        // Fetch the last CIF code for this branch
+        String lastCifCode = cifRepository.findLastCifCodeByBranchCode(branchCode);
+
+        if (lastCifCode == null || lastCifCode.isEmpty()) {
+            return "CIF-" + branchCode + "-0001";
         }
 
-        Branch branch = branchRepository.findById(cifDTO.getBranchId())
-                .orElseThrow(() -> new RuntimeException("Branch not found with ID: " + cifDTO.getBranchId()));
-        cif.setBranch(branch);
-        cif.setStatus(1);
+        try {
 
-        String serialNumber = generateSerialNumber(branch);
-        cif.setSerialNumber(serialNumber);
+            String[] parts = lastCifCode.split("-");
+            if (parts.length != 4) {
+                throw new IllegalArgumentException("Invalid CIF code format: " + lastCifCode);
+            }
+            int lastNumber = Integer.parseInt(parts[3]);
+            int newNumber = lastNumber + 1;
 
-        CIF savedCIF = cifRepository.save(cif);
-        return modelMapper.map(savedCIF, CIFDTO.class);
+            return "CIF-" + branchCode + "-" + String.format("%04d", newNumber);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error parsing CIF code: " + lastCifCode + ". Falling back to 0001.");
+            return "CIF-" + branchCode + "-0001";
+        }
     }
-
-    // New method to generate the serial number
-    private String generateSerialNumber(Branch branch) {
-        String branchCode =  branch.getBranchCode();
-
-        String uuidPart = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 6);
-
-        // Combine into final serial number
-        return "CIF-" + branchCode + "-" + uuidPart;
-    }
-
-
-
     private String uploadImage(MultipartFile file) throws IOException {
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         return uploadResult.get("secure_url").toString();
@@ -106,43 +190,55 @@ public class CIFServiceImpl implements CIFService {
     @Transactional
     public CIFDTO updateCIF(Long id, CIFDTO cifDTO, MultipartFile frontNrc, MultipartFile backNrc) throws IOException {
         CIF cif = cifRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("CIF not found with ID: " + id));
+                .orElseThrow(() -> new CIFNotFoundException(id));
 
-        Long existingId = cif.getId();
-        String existingFNrcPhotoUrl = cif.getFNrcPhotoUrl();
-        String existingBNrcPhotoUrl = cif.getBNrcPhotoUrl();
-
-        modelMapper.typeMap(CIFDTO.class, CIF.class).addMappings(mapper -> {
-            mapper.skip(CIF::setSerialNumber);
-        });
-        modelMapper.map(cifDTO, cif);
-
-        cif.setId(existingId);
-        cif.setCreatedAt(LocalDateTime.now());
-        cif.setStatus(1);
-
-        if (frontNrc != null && !frontNrc.isEmpty()) {
-            deleteImage(cif.getFNrcPhotoUrl());
-            String frontNrcUrl = uploadImage(frontNrc);
-            cif.setFNrcPhotoUrl(frontNrcUrl);
-        } else if (cifDTO.getFNrcPhotoUrl() != null) {
-            cif.setFNrcPhotoUrl(cifDTO.getFNrcPhotoUrl());
-        } else {
-            cif.setFNrcPhotoUrl(existingFNrcPhotoUrl);
+        // Validation
+        validateCIFDTO(cifDTO);
+        if (cifDTO.getNrcNumber() != null && !cifDTO.getNrcNumber().equals(cif.getNrcNumber()) &&
+                cifRepository.existsByNrcNumber(cifDTO.getNrcNumber())) {
+            throw new DuplicateCIFException(cifDTO.getNrcNumber());
         }
 
-        if (backNrc != null && !backNrc.isEmpty()) {
-            deleteImage(cif.getBNrcPhotoUrl());
-            String backNrcUrl = uploadImage(backNrc);
-            cif.setBNrcPhotoUrl(backNrcUrl);
-        } else if (cifDTO.getBNrcPhotoUrl() != null) {
-            cif.setBNrcPhotoUrl(cifDTO.getBNrcPhotoUrl());
-        } else {
-            cif.setBNrcPhotoUrl(existingBNrcPhotoUrl);
-        }
+        try {
+            Long existingId = cif.getId();
+            String existingFNrcPhotoUrl = cif.getFNrcPhotoUrl();
+            String existingBNrcPhotoUrl = cif.getBNrcPhotoUrl();
 
-        CIF updatedCIF = cifRepository.save(cif);
-        return modelMapper.map(updatedCIF, CIFDTO.class);
+            modelMapper.typeMap(CIFDTO.class, CIF.class).addMappings(mapper -> {
+                mapper.skip(CIF::setSerialNumber);
+            });
+            modelMapper.map(cifDTO, cif);
+
+            cif.setId(existingId);
+            cif.setCreatedAt(LocalDateTime.now());
+            cif.setStatus(1);
+
+            if (frontNrc != null && !frontNrc.isEmpty()) {
+                deleteImage(cif.getFNrcPhotoUrl());
+                String frontNrcUrl = uploadImage(frontNrc);
+                cif.setFNrcPhotoUrl(frontNrcUrl);
+            } else if (cifDTO.getFNrcPhotoUrl() != null) {
+                cif.setFNrcPhotoUrl(cifDTO.getFNrcPhotoUrl());
+            } else {
+                cif.setFNrcPhotoUrl(existingFNrcPhotoUrl);
+            }
+
+            if (backNrc != null && !backNrc.isEmpty()) {
+                deleteImage(cif.getBNrcPhotoUrl());
+                String backNrcUrl = uploadImage(backNrc);
+                cif.setBNrcPhotoUrl(backNrcUrl);
+            } else if (cifDTO.getBNrcPhotoUrl() != null) {
+                cif.setBNrcPhotoUrl(cifDTO.getBNrcPhotoUrl());
+            } else {
+                cif.setBNrcPhotoUrl(existingBNrcPhotoUrl);
+            }
+
+            CIF updatedCIF = cifRepository.save(cif);
+            return modelMapper.map(updatedCIF, CIFDTO.class);
+        } catch (Exception e) {
+            throw new CIFUpdateException(
+                    "Failed to update CIF with id: " + id, e);
+        }
     }
 
     private void deleteImage(String imageUrl) {
@@ -161,16 +257,49 @@ public class CIFServiceImpl implements CIFService {
     }
 
 
+    @Transactional
     @Override
-    public void deleteCIF(Long id) {
-        Optional<CIF> cifOptional = cifRepository.findById(id);
-        if (cifOptional.isEmpty()) {
-            throw new RuntimeException("CIF not found with ID: " + id);
+    public boolean softDeleteCIF(Long id) {
+        if (cifRepository.existsById(id)) {
+            CIF cif = cifRepository.findById(id).get(); // Safe due to existsById check
+            cif.setStatus(2); // Set status to inactive
+            cifRepository.save(cif);
+            return true;
+        }
+        return false;
+    }
+
+    @Transactional
+    @Override
+    public boolean restoreCIF(Long id) {
+        if (cifRepository.existsById(id)) {
+            CIF cif = cifRepository.findById(id).get(); // Safe due to existsById check
+            cif.setStatus(1); // Set status to active
+            cifRepository.save(cif);
+            return true;
+        }
+        return false;
+    }
+
+    private void validateCIFDTO(CIFDTO cifDTO) {
+        // Required field validation
+        if (cifDTO.getBranchId() == null) {
+            throw new MissingRequiredFieldException("branchId");
+        }
+        if (cifDTO.getNrcNumber() == null || cifDTO.getNrcNumber().trim().isEmpty()) {
+            throw new MissingRequiredFieldException("nrc");
         }
 
-        CIF cif = cifOptional.get();
-        cif.setStatus(2);
-        cifRepository.save(cif);
+        // NRC format validation (example: expecting something like "12/ABC(N)123456")
+        String nrcPattern = "^\\d{1,2}/[A-Za-z]{3}\\([N,R]\\)\\d{6}$";
+        if (!cifDTO.getNrcNumber().matches(nrcPattern)) {
+            throw new InvalidNrcFormatException(cifDTO.getNrcNumber());
+        }
+
+        // Branch ID validation
+        if (cifDTO.getBranchId() <= 0) {
+            throw new InvalidBranchIdException(cifDTO.getBranchId());
+        }
     }
 
 }

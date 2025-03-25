@@ -1,5 +1,6 @@
 package com.sme.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.sme.annotation.StatusConverter;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -17,6 +18,9 @@ public class SmeLoanRegistration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "serial_code", nullable = false, unique = true)
+    private String serialCode;
+
     @Column(name = "loan_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal loanAmount;
 
@@ -31,6 +35,9 @@ public class SmeLoanRegistration {
 
     @Column(name = "one_hundred_and_eighty_day_late_fee_rate", nullable = false, precision = 15, scale = 2)
     private BigDecimal one_hundred_and_eighty_late_fee_rate;
+
+    @Column(name = "due_date", nullable = true)
+    private LocalDateTime dueDate;
 
     @Column(name = "grace_period", nullable = false)
     private Integer gracePeriod;
@@ -51,6 +58,9 @@ public class SmeLoanRegistration {
     @Column(name = "repayment_start_date")
     private LocalDateTime repaymentStartDate;
 
+    @Column(name = "current_account_id", insertable = false, updatable = false) // Managed by the relationship
+    private Long currentAccountId;
+
     @ManyToOne
     @JoinColumn(name = "current_account_id", nullable = false)
     private CurrentAccount currentAccount;
@@ -58,6 +68,7 @@ public class SmeLoanRegistration {
     @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL)
     private List<RepaymentSchedule> repaymentSchedules;
 
-    @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL)
-    private List<SmeLoanCollateral> smeLoanCollaterals; // Always initialized
+    @OneToMany(mappedBy = "smeLoan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<SmeLoanCollateral> collaterals; // Always initialized
 }

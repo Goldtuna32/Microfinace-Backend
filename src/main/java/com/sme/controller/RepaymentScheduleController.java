@@ -4,6 +4,7 @@ import com.sme.dto.RepaymentScheduleDTO;
 import com.sme.service.RepaymentScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,12 +16,14 @@ public class RepaymentScheduleController {
     @Autowired
     private RepaymentScheduleService repaymentScheduleService;
 
+    @PreAuthorize("hasRole('REPAYMENT_SCHEDULE_GENERATE')")
     @PostMapping("/generate/{loanId}")
-    public ResponseEntity<String> generateSchedule(@PathVariable Long loanId) {
+    public ResponseEntity<String> generateSchedule(@PathVariable("loanId") Long loanId) {
         repaymentScheduleService.generateRepaymentSchedule(loanId);
         return ResponseEntity.ok("Repayment schedule generated for loan ID: " + loanId);
     }
 
+    @PreAuthorize("hasRole('REPAYMENT_SCHEDULE_READ')")
     @GetMapping("/{loanId}")
     public ResponseEntity<List<RepaymentScheduleDTO>> getSchedule(@PathVariable Long loanId) {
         List<RepaymentScheduleDTO> schedule = repaymentScheduleService.getRepaymentSchedule(loanId);

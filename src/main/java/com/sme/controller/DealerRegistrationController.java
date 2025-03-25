@@ -1,52 +1,67 @@
 package com.sme.controller;
 
 import com.sme.dto.DealerRegistrationDTO;
-
+import com.sme.repository.DealerRegistrationRepository;
 import com.sme.service.DealerRegistrationService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/dealers")
+@RequestMapping("/api/dealer-registration")
 public class DealerRegistrationController {
 
     @Autowired
     private DealerRegistrationService dealerService;
 
-    // ✅ Create Dealer
+    @Autowired
+    private DealerRegistrationRepository dealerRegistrationRepository;
+
+    @PreAuthorize("hasRole('DEALER_REGISTRATION_READ')")
+    @GetMapping("/all")
+    public List<DealerRegistrationDTO> getDealerRegistrations() {
+        return dealerService.getAllDealerRegistrations();
+    }
+
+    @PreAuthorize("hasRole('DEALER_REGISTRATION_CREATE')")
     @PostMapping
-    public ResponseEntity<DealerRegistrationDTO> createDealer(@RequestBody DealerRegistrationDTO dealerDTO) {
-        return ResponseEntity.ok(dealerService.createDealer(dealerDTO));
+    public ResponseEntity<DealerRegistrationDTO> createDealer(@RequestBody DealerRegistrationDTO dto) {
+        return ResponseEntity.ok(dealerService.createDealer(dto));
     }
 
-    // ✅ Get All Dealers
-    @GetMapping
-    public ResponseEntity<List<DealerRegistrationDTO>> getAllDealers() {
-        return ResponseEntity.ok(dealerService.getAllDealers());
+    @PreAuthorize("hasAuthority('DEALER_REGISTRATION_CREATE')")
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Map<String, Boolean>> checkDuplicate(
+            @RequestParam(required = false) String companyName,
+            @RequestParam(required = false) String phoneNumber) {
+        boolean isDuplicate = dealerRegistrationRepository.existsByCompanyName(companyName) ||
+                dealerRegistrationRepository.existsByPhoneNumber(phoneNumber);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isDuplicate", isDuplicate);
+        return ResponseEntity.ok(response);
     }
 
-    // ✅ Get Dealer by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<DealerRegistrationDTO> getDealerById(@PathVariable Long id) {
-        return ResponseEntity.ok(dealerService.getDealerById(id));
-    }
-
- 
+    @PreAuthorize("hasRole('DEALER_REGISTRATION_UPDATE')")
     @PutMapping("/{id}")
-    public ResponseEntity<DealerRegistrationDTO> updateDealer(
-            @PathVariable Long id,
-            @RequestBody DealerRegistrationDTO dealerDTO) {
-        return ResponseEntity.ok(dealerService.updateDealer(id, dealerDTO));
+    public ResponseEntity<DealerRegistrationDTO> updateDealer(@PathVariable Long id, @RequestBody DealerRegistrationDTO dto) {
+        return ResponseEntity.ok(dealerService.updateDealer(id, dto));
     }
 
-    // ✅ Delete Dealer
+    @PreAuthorize("hasRole('DEALER_REGISTRATION_READ')")
+    @GetMapping("/{id}")
+    public ResponseEntity<DealerRegistrationDTO> getDealer(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(dealerService.getDealer(id));
+    }
+
+    @PreAuthorize("hasRole('DEALER_REGISTRATION_DELETE')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteDealer(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteDealer(@PathVariable Long id) {
         dealerService.deleteDealer(id);
-        return ResponseEntity.ok("Dealer deleted successfully.");
+        return ResponseEntity.noContent().build();
     }
 }

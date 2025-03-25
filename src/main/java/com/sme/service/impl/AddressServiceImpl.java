@@ -1,6 +1,9 @@
 package com.sme.service.impl;
 
 import com.sme.entity.Address;
+import com.sme.exception.AddressCreationException;
+import com.sme.exception.AddressNotFoundException;
+import com.sme.exception.AddressUpdateException;
 import com.sme.repository.AddressRepository;
 import com.sme.service.AddressService;
 import lombok.RequiredArgsConstructor;
@@ -31,22 +34,32 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public Address createAddress(Address address) {
-        return addressRepository.save(address);
+        try {
+            return addressRepository.save(address);
+        } catch (Exception e) {
+            throw new AddressCreationException(
+                    "Failed to create address with region: " + address.getRegion(), e);
+        }
     }
 
     @Override
     public Address updateAddress(Long id, Address addressDetails) {
         Optional<Address> optionalAddress = addressRepository.findById(id);
 
-        if (optionalAddress.isPresent()) {
+        if (!optionalAddress.isPresent()) {
+            throw new AddressNotFoundException(id);
+        }
+
+        try {
             Address address = optionalAddress.get();
             address.setRegion(addressDetails.getRegion());
             address.setDistrict(addressDetails.getDistrict());
             address.setTownship(addressDetails.getTownship());
             address.setStreet(addressDetails.getStreet());
             return addressRepository.save(address);
-        } else {
-            throw new RuntimeException("Address not found with id: " + id);
+        } catch (Exception e) {
+            throw new AddressUpdateException(
+                    "Failed to update address with id: " + id, e);
         }
     }
 

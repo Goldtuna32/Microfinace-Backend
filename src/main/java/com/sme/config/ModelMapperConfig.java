@@ -16,7 +16,7 @@ public class ModelMapperConfig {
     private ModelMapper modelMapper;
 
     private void configureMappings() {
-        // Map CIF entity to CIFDTO
+
         modelMapper.typeMap(CIF.class, CIFDTO.class).addMappings(mapper -> {
             mapper.map(CIF::getFNrcPhotoUrl, CIFDTO::setFNrcPhotoUrl);
             mapper.map(CIF::getBNrcPhotoUrl, CIFDTO::setBNrcPhotoUrl);

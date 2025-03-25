@@ -9,9 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService; // Corr
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-
-@Service
+import java.util.Collections;@Service
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -25,7 +23,17 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase());
+        // Get role name from the database (preserve original case)
+        String roleName = (user.getRole() != null)
+                ? user.getRole().getName()
+                : "USER"; // Default role
+
+        // Add ROLE_ prefix if missing (do NOT uppercase)
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
+        GrantedAuthority authority = new SimpleGrantedAuthority(roleName);
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),

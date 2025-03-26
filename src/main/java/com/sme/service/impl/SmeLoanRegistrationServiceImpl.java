@@ -50,7 +50,7 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     @Override
     @Transactional
     public SmeLoanRegistrationDTO registerLoan(LoanRegistrationRequest request) {
-        validateL oanRequest(request);
+        validateLoanRequest(request);
 
         SmeLoanRegistration loan = new SmeLoanRegistration();
         SmeLoanRegistrationDTO loanDTO = request.getLoan();

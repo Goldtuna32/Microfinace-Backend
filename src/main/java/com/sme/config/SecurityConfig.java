@@ -45,6 +45,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login","/api/auth/refresh").permitAll()
                         .requestMatchers("/api/branches/**").hasRole("ADMIN")
+                        .requestMatchers("/email-websocket").permitAll()
+                        .requestMatchers("/api/email/list").permitAll()
+                        .requestMatchers("/api/roles/").permitAll()
+                        .requestMatchers("/api/permissions").permitAll()
+                        .requestMatchers("/api/auth/logout").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(customUserDetailsService)

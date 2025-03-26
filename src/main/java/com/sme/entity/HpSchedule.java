@@ -4,9 +4,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.Date;
+import java.time.LocalDate;
+
+
+import com.sme.annotation.StatusConverter;
 
 @Entity
 @Data
@@ -16,8 +17,11 @@ public class HpSchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "date")
-    private Timestamp date;
+    @Column(name = "due_date", nullable = false)
+    private LocalDate dueDate;
+
+    @Column(name = "grace_end", nullable = false)
+    private LocalDate graceEndDate;
 
     @Column(name = "interest_amount")
     private Long interestAmount;
@@ -34,8 +38,14 @@ public class HpSchedule {
     @Column(name = "principal_od")
     private BigDecimal principalOd;
 
+    @Column(name = "principalLateFeePaidDate")
+    private LocalDate principalLateFeePaidDate;
+
     @Column(name = "interest_od")
     private BigDecimal interestOd;
+
+    @Column(name = "interestLateFeePaidDate")
+    private LocalDate interestLateFeePaidDate;
 
     @Column(name = "installment_no")
     private String installmentNo;
@@ -44,6 +54,10 @@ public class HpSchedule {
     private Long hpRegistrationId;
 
     @Column(name = "late_fee_paid_date")
-    private LocalDateTime lateFeePaidDate;
+    private LocalDate lateFeePaidDate;
+
+    @StatusConverter
+    @Column(name = "status", nullable = false)
+    private Integer status;
 
  }

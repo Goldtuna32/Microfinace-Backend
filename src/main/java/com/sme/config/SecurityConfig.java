@@ -15,7 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 
 
 @Configuration
@@ -38,18 +42,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Add CORS configuration
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPoint)) // Handle Unauthorized
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login","/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/logout").permitAll()
                         .requestMatchers("/api/branches/**").hasRole("ADMIN")
-                        .requestMatchers("/email-websocket").permitAll()
-                        .requestMatchers("/api/email/list").permitAll()
+                        .requestMatchers("/api/users/current").permitAll()
                         .requestMatchers("/api/roles/").permitAll()
                         .requestMatchers("/api/permissions").permitAll()
-                        .requestMatchers("/api/auth/logout").permitAll()
+                        .requestMatchers("/email-websocket").permitAll()
+                        .requestMatchers("/api/notifications/").permitAll()
+                        .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(customUserDetailsService)
@@ -70,5 +76,17 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Allow your frontend origin
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Allow necessary methods
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept")); // Allow necessary headers
+        configuration.setAllowCredentials(true); // Allow sending cookies
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration); // Apply to all endpoints
+        return source;
     }
 }

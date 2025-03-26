@@ -1,7 +1,9 @@
 package com.sme.service.impl;
 
 import com.sme.dto.HpRegistrationDTO;
+import com.sme.entity.CurrentAccount;
 import com.sme.entity.HpRegistration;
+import com.sme.repository.CurrentAccountRepository;
 import com.sme.repository.HpRegistrationRepository;
 import com.sme.service.HpRegistrationService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,9 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
 
     @Autowired
     private HpRegistrationRepository repository;
+
+    @Autowired
+    private CurrentAccountRepository currentAccountRepository;  // Add this
 
     @Autowired
     private ModelMapper modelMapper;
@@ -58,10 +63,15 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         if (dto.getLoanTerm() != null) existingHp.setLoanTerm(dto.getLoanTerm());
         if (dto.getInterestRate() != null) existingHp.setInterestRate(dto.getInterestRate());
         if (dto.getStartDate() != null) existingHp.setStartDate(dto.getStartDate());
-        if (dto.getEndDate() != null) existingHp.setEndDate(dto.getEndDate());
+        //if (dto.getEndDate() != null) existingHp.setEndDate(dto.getEndDate());
         if (dto.getStatus() != null) existingHp.setStatus(dto.getStatus());
-//        if (dto.getCurrentAccountId() != null) existingHp.setCurrentAccountId(dto.getCurrentAccountId());
-//        if (dto.getHpProductId() != null) existingHp.setHpProductId(dto.getHpProductId());
+        if (dto.getCurrentAccountId() != null) {
+            CurrentAccount currentAccount = currentAccountRepository.findById(dto.getCurrentAccountId())
+                    .orElseThrow(() -> new RuntimeException("Current Account not found"));
+            existingHp.setCurrentAccount(currentAccount);
+        }
+        
+        if (dto.getHpProductId() != null) existingHp.setHpProductId(dto.getHpProductId());
 
         HpRegistration updatedHp = repository.save(existingHp);
         return modelMapper.map(updatedHp, HpRegistrationDTO.class);

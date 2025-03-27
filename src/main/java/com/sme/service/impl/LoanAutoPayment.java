@@ -118,12 +118,12 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
                     .filter(s -> s.getStatus() != 6)
                     .collect(Collectors.toList());
 
-            processPaymentsInOrder(activeSchedules, account, totalAvailable, isOverdue);
+            processPaymentsInOrder(activeSchedules, account, totalAvailable, isOverdue );
         }
     }
 
     private void processPaymentsInOrder(List<RepaymentSchedule> schedules, CurrentAccount account,
-            BigDecimal totalAvailable, boolean isOverdue) {
+            BigDecimal totalAvailable, boolean isOverdue ) {
         BigDecimal remainingBalance = totalAvailable;
         LocalDate today = LocalDate.now();
 
@@ -207,14 +207,14 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
             break;
         
         // Pass schedules list to the method
-        processIndividualSchedule(schedule, account, isOverdue, schedules);
+        processIndividualSchedule(schedule, account, isOverdue, schedules , remainingBalance);
         remainingBalance = account.getBalance();
     }
         }
         
         // Update the method signature and implementation:
         private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, 
-        boolean isOverdue, List<RepaymentSchedule> schedules) {
+        boolean isOverdue, List<RepaymentSchedule> schedules , BigDecimal remainingBalance) {
         System.out.println("\n=== Processing Schedule ID: " + schedule.getId() + " ===");
         System.out.println("Initial account balance: " + account.getBalance());
 
@@ -265,8 +265,8 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
             return; // Changed from continue to return
         }
 
-        // Remove duplicate account declaration and use the one passed as parameter
-        BigDecimal balance = account.getBalance();
+        // Remove duplicate account declaration and use the totalAvailable passed
+        BigDecimal balance = remainingBalance;
 
         // Calculate total late fees first
         BigDecimal totalLateFees = BigDecimal.ZERO;
@@ -281,7 +281,10 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         // If not enough balance for total late fees, hold money
         if (isOverdue && totalLateFees.compareTo(BigDecimal.ZERO) > 0) {
             if (balance.compareTo(totalLateFees) < 0) {
-                account.setHoldAmount(balance);
+                // Get existing hold amount and add new hold
+                BigDecimal existingHold = account.getHoldAmount() != null ? account.getHoldAmount() : BigDecimal.ZERO;
+                BigDecimal newTotalHold = existingHold.add(account.getBalance());
+                account.setHoldAmount(newTotalHold);
                 account.setBalance(BigDecimal.ZERO);
                 currentAccountRepository.save(account);
                 return;
@@ -311,6 +314,11 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
                     }
                 }
             }
+            // Clear hold amount since we've used it for late fee payment
+            account.setHoldAmount(BigDecimal.ZERO);
+            account.setBalance(balance);
+            currentAccountRepository.save(account);
+             // here to set hold amount to zero
         }
 
         // Continue with regular interest and principal processing for current schedule

@@ -363,9 +363,32 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         // 4. Principal
         if (balance.compareTo(BigDecimal.ZERO) > 0) {
             if (balance.compareTo(requiredPrincipal) >= 0) {
+                // Full payment
                 paidPrincipal = requiredPrincipal;
                 balance = balance.subtract(paidPrincipal);
+                schedule.setPrincipalAmount(BigDecimal.ZERO);
+                schedule.setRemainingPrincipal(BigDecimal.ZERO);
+            } else {
+                // Partial payment - use all remaining balance
+                paidPrincipal = balance;
+                BigDecimal remainingAmount = requiredPrincipal.subtract(paidPrincipal);
+                schedule.setPrincipalAmount(remainingAmount);
+                schedule.setRemainingPrincipal(remainingAmount);
+                
+                // Update all future schedules with the new remaining amount
+                List<RepaymentSchedule> futureSchedules = schedules.stream()
+                    .filter(s -> s.getId() > schedule.getId() && s.getStatus() != 6)
+                    .collect(Collectors.toList());
+                
+                for (RepaymentSchedule futureSchedule : futureSchedules) {
+                    futureSchedule.setPrincipalAmount(remainingAmount);
+                    futureSchedule.setRemainingPrincipal(remainingAmount);
+                    repaymentScheduleRepository.save(futureSchedule);
+                }
+                
+                balance = BigDecimal.ZERO;  // Use all remaining balance for partial payment
             }
+            repaymentScheduleRepository.save(schedule);
         }
 
         // Update account balance and save immediately

@@ -236,6 +236,15 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         try {
             loan.setStatus(4);
             SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
+            CurrentAccount currentAccount = loan.getCurrentAccount();
+            if (currentAccount == null) {
+                throw new CurrentAccountNotFoundException("Current account not found for loan ID: " + id);
+            }
+            BigDecimal loanAmount = loan.getLoanAmount(); // Assuming loanAmount is available in SmeLoanRegistration
+            BigDecimal currentBalance = currentAccount.getBalance();
+            currentAccount.setBalance(currentBalance.add(loanAmount));
+            // Save the updated current account.
+            currentAccountRepository.save(currentAccount);
             repaymentScheduleService.generateRepaymentSchedule(id);
             return mapToDTO(updatedLoan);
         } catch (Exception e) {

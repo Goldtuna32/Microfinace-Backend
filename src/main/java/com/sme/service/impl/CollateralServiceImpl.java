@@ -2,6 +2,7 @@ package com.sme.service.impl;
 
 // Add this import
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -291,6 +292,18 @@ public class CollateralServiceImpl implements CollateralService {
         return collateralRepository.findByCifIdAndStatus(cifId, 1).stream() // Fetch active collaterals only
                 .map(collateral -> modelMapper.map(collateral, CollateralDTO.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public BigDecimal getTotalCollateralValue() {
+        return collateralRepository.sumCollateralValue().orElse(BigDecimal.ZERO);
+    }
+
+    @Override
+    public BigDecimal getAverageCollateralPerLoan() {
+        BigDecimal totalValue = getTotalCollateralValue();
+        long loanCount = collateralRepository.countDistinctLoans();
+        return loanCount > 0 ? totalValue.divide(BigDecimal.valueOf(loanCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
     }
 
 }

@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -399,6 +401,32 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + loanId));
 
         return mapToDTO(loanId); // Use the complete mapping method
+    }
+
+    @Override
+    public long getTotalLoanCount() {
+        return smeLoanRegistrationRepository.count();
+    }
+
+    @Override
+    public long getPendingLoanCount() {
+        return smeLoanRegistrationRepository.countByStatus(0); // Assuming 0 is pending status
+    }
+
+    @Override
+    public long countByStatus(int status) {
+        return smeLoanRegistrationRepository.countByStatus(status);
+    }
+
+    @Override
+    public List<Object[]> countLoansByMonth() {
+        return smeLoanRegistrationRepository.countLoansGroupedByMonth();
+    }
+
+    @Override
+    public List<SmeLoanRegistration> findRecentLoans(int limit) {
+        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "repaymentStartDate"));
+        return smeLoanRegistrationRepository.findAll(pageable).getContent();
     }
 
 }

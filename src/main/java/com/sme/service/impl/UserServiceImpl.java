@@ -2,11 +2,13 @@ package com.sme.service.impl;
 
 import com.sme.dto.PermissionDTO;
 import com.sme.dto.UserDTO;
+import com.sme.dto.UserMapper;
 import com.sme.entity.*;
 import com.sme.repository.*;
 import com.sme.service.CloudinaryService;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,23 +28,25 @@ public class UserServiceImpl implements UserService {
     private final BranchRepository branchRepository;
     private final CloudinaryService cloudinaryService;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
-//    private final UserPermissionRepository userPermissionRepository;
+    private final UserPermissionRepository userPermissionRepository;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
                            BranchRepository branchRepository, CloudinaryService cloudinaryService,
-                           PasswordEncoder passwordEncoder, PermissionRepository permissionRepository,
-                           RolePermissionRepository rolePermissionRepository) {
+                           PasswordEncoder passwordEncoder, UserMapper userMapper, PermissionRepository permissionRepository,
+                           RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
         this.cloudinaryService = cloudinaryService;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
-
+        this.userPermissionRepository = userPermissionRepository;
     }
 
     @Override
@@ -84,11 +88,11 @@ public class UserServiceImpl implements UserService {
         return mapToDTO(savedUser);
     }
 
-       @Override
+    @Override
     public UserDTO getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return mapToDTO(user);
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return userMapper.toDto(user);
     }
 
     @Override
@@ -203,7 +207,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO getCurrentUser(String email) {
-        User user = getUserEntityByEmail(email);
+        User user = userRepository.findWithBranchAndRoleByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         UserDTO userDTO = mapToDTO(user);
         List<Permission> permissions = getUserPermissions(user.getId());
         List<PermissionDTO> permissionDTOs = permissions.stream().map(p -> {

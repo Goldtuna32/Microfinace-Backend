@@ -22,4 +22,18 @@ public interface SmeLoanRegistrationRepository extends JpaRepository<SmeLoanRegi
     Page<SmeLoanRegistration> findAllPendingLoans(Pageable pageable);
 
     Long countByCurrentAccountId(Long currentAccountId);
+
+    Long countByStatus(Integer status);
+
+    @Query("SELECT MONTH(s.repaymentStartDate) - 1 as month, COUNT(s) as count " +
+            "FROM SmeLoanRegistration s " +
+            "WHERE YEAR(s.repaymentStartDate) = YEAR(CURRENT_DATE) " +
+            "GROUP BY month")  // Group by the alias
+    List<Object[]> countLoansGroupedByMonth();
+
+    @Query("SELECT COUNT(slr) FROM SmeLoanRegistration slr WHERE slr.currentAccount.cif.branch.id = :branchId")
+    int countByBranchId(Long branchId);
+
+    @Query("SELECT COUNT(slr) FROM SmeLoanRegistration slr WHERE slr.currentAccount.cif.branch.id = :branchId AND slr.status = :status")
+    int countByBranchIdAndStatus(Long branchId, Integer status);
 }

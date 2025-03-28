@@ -18,4 +18,6 @@ public interface DealerRegistrationRepository extends JpaRepository<DealerRegist
 
      @Query("SELECT COUNT(dr) FROM DealerRegistration dr WHERE dr.currentAccount.cif.branch.id = :branchId")
      int countByBranchId(Long branchId);
+
+
 }

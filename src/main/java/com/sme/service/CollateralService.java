@@ -28,4 +28,8 @@ public interface CollateralService {
     BigDecimal getTotalCollateralValue();
     BigDecimal getAverageCollateralPerLoan();
 
+    List<CollateralDTO> getAllCollateral(Long branchId);
+
+    List<CollateralDTO> getFreeezeCurrentAccountsByBranch(Long branchId);
+
 }

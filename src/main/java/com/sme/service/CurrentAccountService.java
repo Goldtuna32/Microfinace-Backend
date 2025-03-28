@@ -33,4 +33,10 @@ public interface CurrentAccountService {
 
     CurrentAccountDTO getAccountById(Long accountId) throws CurrentAccountNotFoundException;
 
+    List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId);
+
+    List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId);
+
+
+
 }

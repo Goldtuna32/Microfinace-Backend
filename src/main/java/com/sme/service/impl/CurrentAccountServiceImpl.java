@@ -1,5 +1,6 @@
 package com.sme.service.impl;
 
+import com.sme.dto.CIFDTO;
 import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.Collateral;
 import com.sme.entity.CurrentAccount;
@@ -255,5 +256,21 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         }
 
         return dto;
+    }
+
+    @Override
+    public List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId) {
+        List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
+        return currentAccounts.stream()
+                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
+        List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
+        return currentAccounts.stream()
+                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .collect(Collectors.toList());
     }
 }

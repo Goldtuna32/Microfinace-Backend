@@ -320,14 +320,20 @@ public class CIFServiceImpl implements CIFService {
         return cifRepository.countByStatus(1); // Assuming 1 is active status
     }
 
-    public Page<CIFDTO> getAllCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix) {
-        Page<CIF> cifs = cifRepository.findActiveCIFsByBranch(branchId, nrcPrefix, pageable);
-        return cifs.map(this::convertToDTO);
+    @Override
+    public List<CIFDTO> getAllCIFsByBranch(Long branchId, String nrcPrefix) {
+        List<CIF> cifs = cifRepository.findActiveCIFsByBranch(branchId, nrcPrefix);
+        return cifs.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
     }
 
-    public Page<CIFDTO> getDeletedCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix) {
-        Page<CIF> cifs = cifRepository.findDeletedCIFsByBranch(branchId, nrcPrefix, pageable);
-        return cifs.map(this::convertToDTO);
+    @Override
+    public List<CIFDTO> getDeletedCIFsByBranch(Long branchId, String nrcPrefix) {
+        List<CIF> cifs = cifRepository.findDeletedCIFsByBranch(branchId, nrcPrefix);
+        return cifs.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
     }
 
 }

@@ -34,7 +34,7 @@ public interface CIFService {
     long getTotalCifCount();
     long getActiveCifCount();
 
-    Page<CIFDTO> getDeletedCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix);
+    List<CIFDTO> getDeletedCIFsByBranch(Long branchId, String nrcPrefix);
 
-    Page<CIFDTO> getAllCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix);
+    List<CIFDTO> getAllCIFsByBranch(Long branchId, String nrcPrefix);
 }

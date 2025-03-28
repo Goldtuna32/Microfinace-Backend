@@ -45,16 +45,14 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
     @Query("SELECT c FROM CIF c WHERE c.status = 1 " +
             "AND (:branchId IS NULL OR c.branch.id = :branchId) " +
             "AND (:nrcPrefix IS NULL OR c.nrcNumber LIKE :nrcPrefix%)")
-    Page<CIF> findActiveCIFsByBranch(
+    List<CIF> findActiveCIFsByBranch(
             @Param("branchId") Long branchId,
-            @Param("nrcPrefix") String nrcPrefix,
-            Pageable pageable);
+            @Param("nrcPrefix") String nrcPrefix);
 
     @Query("SELECT c FROM CIF c WHERE c.status = 2 " +
             "AND (:branchId IS NULL OR c.branch.id = :branchId) " +
             "AND (:nrcPrefix IS NULL OR c.nrcNumber LIKE :nrcPrefix%)")
-    Page<CIF> findDeletedCIFsByBranch(
+    List<CIF> findDeletedCIFsByBranch(
             @Param("branchId") Long branchId,
-            @Param("nrcPrefix") String nrcPrefix,
-            Pageable pageable);
+            @Param("nrcPrefix") String nrcPrefix);
 }

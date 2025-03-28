@@ -37,25 +37,25 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/inactive")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<List<UserDTO>> getAllInactiveUsers() {
         return ResponseEntity.ok(userService.getAllInactiveUsers());
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_UPDATE')")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable Long id,
             @RequestPart("user") String userJson,
@@ -64,22 +64,16 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, userDTO, file));
     }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) throws IOException {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
 
     @DeleteMapping("/soft/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_DELETE')")
     public ResponseEntity<Void> softDeleteUser(@PathVariable Long id) {
         userService.softDeleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/restore/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_DELETE')")
     public ResponseEntity<Void> restoreUser(@PathVariable Long id) {
         userService.restoreUser(id);
         return ResponseEntity.ok().build();

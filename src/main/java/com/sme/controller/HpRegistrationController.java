@@ -15,19 +15,19 @@ public class HpRegistrationController {
     @Autowired
     private HpRegistrationService service;
 
-    @PreAuthorize("hasRole('HP_REGISTRATION_READ')")
+    @PreAuthorize("hasRole('HP_REGISTER_READ')")
     @GetMapping
     public List<HpRegistrationDTO> getAllHpRegistrations() {
         return service.getAllHpRegistrations();
     }
 
-    @PreAuthorize("hasRole('HP_REGISTRATION_READ')")
+    @PreAuthorize("hasRole('HP_REGISTER_READ')")
     @GetMapping("/{id}")
     public HpRegistrationDTO getHpRegistrationById(@PathVariable Long id) {
         return service.getHpRegistrationById(id);
     }
 
-    @PreAuthorize("hasRole('HP_REGISTRATION_CREATE')")
+    @PreAuthorize("hasRole('HP_REGISTER_CREATE')")
     @PostMapping
     public HpRegistrationDTO createHpRegistration(@RequestBody HpRegistrationDTO dto) {
         return service.createHpRegistration(dto);
@@ -35,13 +35,13 @@ public class HpRegistrationController {
 
 
 
-    @PreAuthorize("hasRole('HP_REGISTRATION_UPDATE')")
+    @PreAuthorize("hasRole('HP_REGISTER_UPDATE')")
     @PutMapping("/{id}")
     public HpRegistrationDTO updateHpRegistration(@PathVariable Long id, @RequestBody HpRegistrationDTO dto) {
         return service.updateHpRegistration(id, dto);
     }
 
-    @PreAuthorize("hasRole('HP_REGISTRATION_DELETE')")
+    @PreAuthorize("hasRole('HP_REGISTER_DELETE')")
     @DeleteMapping("/{id}")
     public void deleteHpRegistration(@PathVariable Long id) {
         service.deleteHpRegistration(id);

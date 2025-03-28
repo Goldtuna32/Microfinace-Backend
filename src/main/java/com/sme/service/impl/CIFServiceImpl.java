@@ -302,4 +302,12 @@ public class CIFServiceImpl implements CIFService {
         }
     }
 
+    @Override
+    public CIFDTO getCifById(Long cifId) throws CIFNotFoundException {
+        CIF cif = cifRepository.findById(cifId)
+                .orElseThrow(() -> new CIFNotFoundException(cifId));
+
+        return modelMapper.map(cif, CIFDTO.class);
+    }
+
 }

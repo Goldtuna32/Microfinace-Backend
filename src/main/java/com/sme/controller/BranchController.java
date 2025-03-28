@@ -3,6 +3,7 @@ package com.sme.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sme.dto.AddressDTO;
 import com.sme.dto.BranchDTO;
+import com.sme.dto.BranchDetailDTO;
 import com.sme.repository.BranchRepository;
 import com.sme.service.BranchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +43,14 @@ public class BranchController {
         Optional<BranchDTO> branch = branchService.getBranchById(id);
         return branch.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-    
+
+    @PreAuthorize("hasAuthority('BRANCH_READ')")
+    @GetMapping("/{id}/details")
+    public ResponseEntity<BranchDetailDTO> getBranchDetails(@PathVariable Long id) {
+        BranchDetailDTO branch = branchService.getBranchDetails(id);
+        return ResponseEntity.ok(branch);
+    }
+
     @PreAuthorize("hasAuthority('BRANCH_CREATE')")
     @PostMapping
     public ResponseEntity<BranchDTO> createBranch(@RequestBody Map<String, Object> request) {

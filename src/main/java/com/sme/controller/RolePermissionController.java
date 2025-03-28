@@ -1,5 +1,6 @@
 package com.sme.controller;
 
+import com.sme.dto.RolePermissionDTO;
 import com.sme.entity.RolePermission;
 import com.sme.service.RolePermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,37 +23,37 @@ public class RolePermissionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RolePermission> createRolePermission(
+    @PreAuthorize("hasRole('ROLE_CREATE')")
+    public ResponseEntity<RolePermissionDTO> createRolePermission(
             @RequestParam Long roleId,
             @RequestParam Long permissionId) {
-        RolePermission rolePermission = rolePermissionService.createRolePermission(roleId, permissionId);
+        RolePermissionDTO rolePermission = rolePermissionService.createRolePermission(roleId, permissionId);
         return ResponseEntity.ok(rolePermission);
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<RolePermission>> getAllRolePermissions() {
+    @PreAuthorize("hasRole('ROLE_READ')")
+    public ResponseEntity<List<RolePermissionDTO>> getAllRolePermissions() {
         return ResponseEntity.ok(rolePermissionService.getAllRolePermissions());
     }
 
     @GetMapping("/role/{roleId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<RolePermission>> getRolePermissionsByRoleId(@PathVariable Long roleId) {
+    @PreAuthorize("hasRole('ROLE_READ')")
+    public ResponseEntity<List<RolePermissionDTO>> getRolePermissionsByRoleId(@PathVariable Long roleId) {
         return ResponseEntity.ok(rolePermissionService.getRolePermissionsByRoleId(roleId));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RolePermission> updateRolePermission(
+    @PreAuthorize("hasRole('ROLE_UPDATE')")
+    public ResponseEntity<RolePermissionDTO> updateRolePermission(
             @PathVariable Long id,
             @RequestParam Long permissionId) {
-        RolePermission updatedRolePermission = rolePermissionService.updateRolePermission(id, permissionId);
+        RolePermissionDTO updatedRolePermission = rolePermissionService.updateRolePermission(id, permissionId);
         return ResponseEntity.ok(updatedRolePermission);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DELETE')")
     public ResponseEntity<Void> deleteRolePermission(@PathVariable Long id) {
         rolePermissionService.deleteRolePermission(id);
         return ResponseEntity.noContent().build();

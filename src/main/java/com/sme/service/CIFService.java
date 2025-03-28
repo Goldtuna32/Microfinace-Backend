@@ -1,6 +1,7 @@
 package com.sme.service;
 
 import com.sme.dto.CIFDTO;
+import com.sme.exception.CIFNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,4 +28,6 @@ public interface CIFService {
 
     boolean softDeleteCIF(Long id); // Soft delete (set status to 2)
     boolean restoreCIF(Long id);
+
+    CIFDTO getCifById(Long cifId) throws CIFNotFoundException;
 }

@@ -5,4 +5,5 @@ public interface ReportService {
     byte[] generateDeletedCIFReport(String format) throws Exception;
     byte[] generateTransactionReport(String format) throws Exception;
     byte[] generateCIFDetailReport(Long cifId, String format) throws Exception;
+    byte[] generateLoanDetailReport(Long loanId, String format) throws Exception;
 }

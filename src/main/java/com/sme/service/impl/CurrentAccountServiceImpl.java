@@ -241,4 +241,19 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
             throw new InvalidBalanceRangeException(accountDTO.getMinimumBalance(), accountDTO.getMaximumBalance());
         }
     }
+
+    @Override
+    public CurrentAccountDTO getAccountById(Long accountId) throws CurrentAccountNotFoundException {
+        CurrentAccount account = currentAccountRepository.findById(accountId)
+                .orElseThrow(() -> new CurrentAccountNotFoundException(accountId));
+
+        CurrentAccountDTO dto = modelMapper.map(account, CurrentAccountDTO.class);
+
+        // Map additional fields if needed
+        if (account.getCif() != null) {
+            dto.setCifId(account.getCif().getId());
+        }
+
+        return dto;
+    }
 }

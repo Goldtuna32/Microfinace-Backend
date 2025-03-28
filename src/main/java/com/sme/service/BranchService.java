@@ -2,6 +2,7 @@ package com.sme.service;
 
 import com.sme.dto.BranchDTO;
 import com.sme.dto.AddressDTO;
+import com.sme.dto.BranchDetailDTO;
 import com.sme.entity.Branch;
 import com.sme.entity.Address;
 import com.sme.repository.BranchRepository;
@@ -39,7 +40,7 @@ public interface BranchService {
 
    Optional<BranchDTO> getBranchById(Long id);
 
-
+    BranchDetailDTO getBranchDetails(Long branchId);
 
     BranchDTO updateBranch(Long id, BranchDTO branchDTO);
 

@@ -28,13 +28,13 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
-    private final UserPermissionRepository userPermissionRepository;
+//    private final UserPermissionRepository userPermissionRepository;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
                            BranchRepository branchRepository, CloudinaryService cloudinaryService,
                            PasswordEncoder passwordEncoder, PermissionRepository permissionRepository,
-                           RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
+                           RolePermissionRepository rolePermissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
-        this.userPermissionRepository = userPermissionRepository;
+
     }
 
     @Override

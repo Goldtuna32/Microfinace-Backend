@@ -86,7 +86,6 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         repository.deleteById(id);
     }
 
-
     @Transactional
     @Override
     public HpRegistrationDTO approveLoan(Long id) {
@@ -101,24 +100,39 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
             loan.setStatus(4);
             HpRegistration updatedLoan = repository.save(loan);
 
-            CurrentAccount currentAccount = loan.getCurrentAccount();
+            CurrentAccount customerAccount = loan.getCurrentAccount();
+            CurrentAccount dealerAccount = loan.getCurrentAccount(); // Assuming you have a dealer account in HpRegistration
 
-
-            if (currentAccount == null) {
-                throw new CurrentAccountNotFoundException("Current account not found for loan ID: " + id);
+            if (customerAccount == null || dealerAccount == null) {
+                throw new CurrentAccountNotFoundException("Customer or Dealer account not found for loan ID: " + id);
             }
 
             BigDecimal loanAmount = loan.getLoanAmount();
-            BigDecimal currentBalance = currentAccount.getBalance();
-            currentAccount.setBalance(currentBalance.add(loanAmount));
+            BigDecimal downPayment = loan.getDownPayment(); // Assuming you have downPayment in HpRegistration
 
-            currentAccountRepository.save(currentAccount);
+            BigDecimal customerBalance = customerAccount.getBalance();
+
+            // Check if customer has enough balance for down payment
+            if (customerBalance.compareTo(downPayment) < 0) {
+                throw new InsufficientFundsException("Insufficient funds in customer account for down payment.");
+            }
+
+            // Transfer down payment from customer to dealer
+            customerAccount.setBalance(customerBalance.subtract(downPayment));
+            dealerAccount.setBalance(dealerAccount.getBalance().add(downPayment));
+
+            // Transfer remaining loan amount to dealer
+            BigDecimal remainingLoanAmount = loanAmount.subtract(downPayment);
+            dealerAccount.setBalance(dealerAccount.getBalance().add(remainingLoanAmount));
+
+            currentAccountRepository.save(customerAccount);
+            currentAccountRepository.save(dealerAccount);
 
             HpScheduleService.generateHpRepaymentSchedule(id);
 
-            return mapToDTO(updatedLoan); // Use the updatedLoan object here.
+            return mapToDTO(updatedLoan);
 
-        } catch (CurrentAccountNotFoundException | InvalidStatusTransitionException | LoanNotFoundException e) {
+        } catch (InsufficientFundsException | CurrentAccountNotFoundException | InvalidStatusTransitionException | LoanNotFoundException e) {
             throw e;
         } catch (Exception e) {
             throw new LoanUpdateException("Failed to approve loan with id: " + id, e);
@@ -127,11 +141,16 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
 
     private HpRegistrationDTO mapToDTO(HpRegistration loan) {
         // Implement your mapping logic here.
-        // Example:
         HpRegistrationDTO dto = new HpRegistrationDTO();
         dto.setId(loan.getId());
         // ... map other fields from loan to dto ...
         return dto;
+    }
+
+    public class InsufficientFundsException extends RuntimeException {
+        public InsufficientFundsException(String message) {
+            super(message);
+        }
     }
 
 

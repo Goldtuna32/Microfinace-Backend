@@ -48,6 +48,8 @@ public class HpRegistration {
     @Column(name = "start_date")
     private LocalDateTime startDate;
 
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
 
     @StatusConverter
     @Column(name = "status")
@@ -61,4 +63,6 @@ public class HpRegistration {
 
     @Column(name = "hp_product_id", nullable = false)
     private Long hpProductId;
+
+
 }

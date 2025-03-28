@@ -1,5 +1,7 @@
 package com.sme.dto;
 
+import com.sme.annotation.StatusConverter;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,5 +17,9 @@ public class SmeLoanCollateralDTO {
     private Long collateralId;
     private BigDecimal collateralAmount;
     private String description;
+    private String collateralCode;
+    private BigDecimal value;
+    @StatusConverter
+    private Integer status;
 
 }

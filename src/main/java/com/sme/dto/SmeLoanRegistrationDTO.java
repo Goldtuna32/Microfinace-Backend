@@ -3,8 +3,6 @@ package com.sme.dto;
 import com.sme.annotation.StatusConverter;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,16 +25,15 @@ public class SmeLoanRegistrationDTO {
     private LocalDateTime repaymentStartDate;
     private Long currentAccountId;
     private BigDecimal totalCollateralAmount;
-    private CIFDTO cif;
     private String accountNumber;
+    private CurrentAccountDTO currentAccountDetails;
+    private CIFDTO cifDetails;
+    private CIFDTO cif; // Add this for frontend compatibility
     private List<SmeLoanCollateralDTO> collaterals;
 
-    @Data
-    public static class CIFDTO {
-        private Long id;
-        private String name;
-        private String serialNumber;
-        private String nrcNumber;
-        private String email;
+    // Add this setter for frontend compatibility
+    public void setCif(CIFDTO cif) {
+        this.cif = cif;
+        this.cifDetails = cif; // Also set cifDetails for consistency
     }
 }

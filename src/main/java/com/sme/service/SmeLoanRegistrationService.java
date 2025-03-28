@@ -38,5 +38,6 @@ public interface SmeLoanRegistrationService {
 
     SmeLoanRegistrationDTO approveLoan(Long id);
 
+    SmeLoanRegistrationDTO getLoanDetailsById(Long loanId);
 
 }

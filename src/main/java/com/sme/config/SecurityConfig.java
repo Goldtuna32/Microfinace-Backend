@@ -55,7 +55,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/permissions").permitAll()
                         .requestMatchers("/email-websocket").permitAll()
                         .requestMatchers("/api/notifications/").permitAll()
-                        .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(customUserDetailsService)

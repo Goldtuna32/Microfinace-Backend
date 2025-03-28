@@ -81,4 +81,19 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
     public void deleteHpRegistration(Long id) {
         repository.deleteById(id);
     }
+
+    @Override
+    public long getTotalHpCount() {
+        return repository.count();
+    }
+
+    @Override
+    public long getActiveHpCount() {
+        return repository.countByStatus(1); // Assuming 1 is active status
+    }
+
+    @Override
+    public List<Object[]> countHpByMonth() {
+        return repository.countHpRegistrationsGroupedByMonth();
+    }
 }

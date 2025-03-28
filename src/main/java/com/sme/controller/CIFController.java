@@ -178,4 +178,28 @@ public class CIFController {
     public ResponseEntity<CIFDTO> getCifByCurrentAccountId(@PathVariable Long currentAccountId) {
         return ResponseEntity.ok(cifService.findCifByCurrentAccountId(currentAccountId));
     }
+
+    @PreAuthorize("hasAuthority('CIF_READ')")
+    @GetMapping("/activeCIFList")
+    public ResponseEntity<Page<CIFDTO>> getAllCIFs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String nrcPrefix) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CIFDTO> cifPage = cifService.getDeletedCIFsByBranch(pageable, branchId, nrcPrefix);
+        return ResponseEntity.ok(cifPage);
+    }
+
+    @PreAuthorize("hasAuthority('CIF_READ')")
+    @GetMapping("/deletedCIFList")
+    public ResponseEntity<Page<CIFDTO>> getDeletedCIFs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String nrcPrefix) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CIFDTO> cifPage = cifService.getDeletedCIFsByBranch(pageable, branchId, nrcPrefix);
+        return ResponseEntity.ok(cifPage);
+    }
 }

@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/roles/").permitAll()
                         .requestMatchers("/api/permissions").permitAll()
                         .requestMatchers("/email-websocket").permitAll()
+                        .requestMatchers("/api/dashboard/**").permitAll()
                         .requestMatchers("/api/notifications/").permitAll()
                         .anyRequest().authenticated()
                 )

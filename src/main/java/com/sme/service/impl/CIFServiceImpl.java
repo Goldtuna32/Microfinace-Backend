@@ -310,4 +310,24 @@ public class CIFServiceImpl implements CIFService {
         return modelMapper.map(cif, CIFDTO.class);
     }
 
+    @Override
+    public long getTotalCifCount() {
+        return cifRepository.count();
+    }
+
+    @Override
+    public long getActiveCifCount() {
+        return cifRepository.countByStatus(1); // Assuming 1 is active status
+    }
+
+    public Page<CIFDTO> getAllCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix) {
+        Page<CIF> cifs = cifRepository.findActiveCIFsByBranch(branchId, nrcPrefix, pageable);
+        return cifs.map(this::convertToDTO);
+    }
+
+    public Page<CIFDTO> getDeletedCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix) {
+        Page<CIF> cifs = cifRepository.findDeletedCIFsByBranch(branchId, nrcPrefix, pageable);
+        return cifs.map(this::convertToDTO);
+    }
+
 }

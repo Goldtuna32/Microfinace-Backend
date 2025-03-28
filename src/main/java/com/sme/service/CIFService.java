@@ -30,4 +30,11 @@ public interface CIFService {
     boolean restoreCIF(Long id);
 
     CIFDTO getCifById(Long cifId) throws CIFNotFoundException;
+
+    long getTotalCifCount();
+    long getActiveCifCount();
+
+    Page<CIFDTO> getDeletedCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix);
+
+    Page<CIFDTO> getAllCIFsByBranch(Pageable pageable, Long branchId, String nrcPrefix);
 }

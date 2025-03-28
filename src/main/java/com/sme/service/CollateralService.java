@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,5 +24,8 @@ public interface CollateralService {
     Page<CollateralDTO> getAllCollateralsPaginated(Pageable pageable);
 
     List<CollateralDTO> getCollateralsByCifId(Long cifId);
+
+    BigDecimal getTotalCollateralValue();
+    BigDecimal getAverageCollateralPerLoan();
 
 }

@@ -40,4 +40,10 @@ public interface SmeLoanRegistrationService {
 
     SmeLoanRegistrationDTO getLoanDetailsById(Long loanId);
 
+    long getTotalLoanCount();
+    long getPendingLoanCount();
+    long countByStatus(int status);
+    List<Object[]> countLoansByMonth();
+    List<SmeLoanRegistration> findRecentLoans(int limit);
+
 }

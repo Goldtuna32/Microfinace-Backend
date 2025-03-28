@@ -20,4 +20,6 @@ public class UserDTO {
     private Long branchId;
     private LocalDateTime lastLogin;
     private List<PermissionDTO> permissions;
+
+
 }

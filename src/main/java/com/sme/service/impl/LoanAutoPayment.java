@@ -74,80 +74,80 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         
         if (!schedulesToProcess.isEmpty()) {
 
-            for (RepaymentSchedule schedule : schedulesToProcess) {
-                if (today.isAfter(schedule.getGraceEndDate())) { // Notify only if past grace period
-                    notifyOverduePayment(schedule);
-                }
-            }
+//            for (RepaymentSchedule schedule : schedulesToProcess) {
+//                if (today.isAfter(schedule.getGraceEndDate())) { // Notify only if past grace period
+//                    notifyOverduePayment(schedule);
+//                }
+//            }
             boolean isOverdue = schedulesToProcess.stream()
                     .anyMatch(schedule -> today.isAfter(schedule.getDueDate()));
             processSchedules(schedulesToProcess, isOverdue);
         }
     }
 
-    private void notifyOverduePayment(RepaymentSchedule schedule) {
-        LocalDate today = LocalDate.now();
-        LocalDate lastNotificationDate = lastNotified.get(schedule.getId());
-
-        // Skip if already notified today
-        if (lastNotificationDate != null && lastNotificationDate.equals(today)) {
-            System.out.println("Skipping notification for schedule #" + schedule.getId() +
-                    " - Already notified today.");
-            return;
-        }
-
-        SmeLoanRegistration loan = schedule.getSmeLoan();
-        CurrentAccount currentAccount = loan.getCurrentAccount();
-        CIF cif = currentAccount.getCif();
-
-        String email = cif.getEmail();
-        String rawPhoneNumber = cif.getPhoneNumber(); // e.g., "09458345022"
-        String phoneNumber = "+95" + rawPhoneNumber.replaceFirst("^0", ""); // Becomes "+959458345022"
-        String customerName = cif.getName();
-
-        String subject = "Overdue Payment Notification - Loan #" + loan.getId();
-        String emailBody = String.format(
-                "Dear %s,\n\nYour loan payment (Schedule #%d) is overdue as of %s.\n" +
-                        "Due Date: %s\nAmount: %s\nPlease make the payment at your earliest convenience.\n\n" +
-                        "Regards,\nSME Loan Team",
-                customerName, schedule.getId(), LocalDate.now(), schedule.getDueDate(),
-                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A"
-        );
-
-        String smsBody = String.format(
-                "Dear %s, Your loan payment (Schedule #%d) is overdue. " +
-                        "Amount: %s. Due: %s. Please pay ASAP.",
-                customerName, schedule.getId(),
-                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
-                schedule.getDueDate()
-        );
-
-        String notificationBody = String.format(
-                "Loan #%d payment overdue. Amount: %s. Due: %s",
-                loan.getId(),
-                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
-                schedule.getDueDate()
-        );
-
-        try {
-            System.out.println("Attempting to send email to " + email + " with body: " + emailBody);
-            emailService.sendEmail(email, subject, emailBody);
-            System.out.println("Attempting to send SMS to " + phoneNumber + " with body: " + smsBody);
-            smsService.sendSms(phoneNumber, smsBody);
-            System.out.println("Attempting to save notification for account #" + currentAccount.getId());
-            notificationService.sendSystemNotification(
-                    currentAccount.getId(),
-                    "OVERDUE_PAYMENT",
-                    notificationBody,
-                    loan.getId()
-            );
-            System.out.println("Notifications sent for schedule #" + schedule.getId());
-            lastNotified.put(schedule.getId(), today); // Update last notified date
-        } catch (Exception e) {
-            System.err.println("Failed to send notifications for schedule #" +
-                    schedule.getId() + ": " + e.getMessage());
-        }
-    }
+//    private void notifyOverduePayment(RepaymentSchedule schedule) {
+//        LocalDate today = LocalDate.now();
+//        LocalDate lastNotificationDate = lastNotified.get(schedule.getId());
+//
+//        // Skip if already notified today
+//        if (lastNotificationDate != null && lastNotificationDate.equals(today)) {
+//            System.out.println("Skipping notification for schedule #" + schedule.getId() +
+//                    " - Already notified today.");
+//            return;
+//        }
+//
+//        SmeLoanRegistration loan = schedule.getSmeLoan();
+//        CurrentAccount currentAccount = loan.getCurrentAccount();
+//        CIF cif = currentAccount.getCif();
+//
+//        String email = cif.getEmail();
+//        String rawPhoneNumber = cif.getPhoneNumber(); // e.g., "09458345022"
+//        String phoneNumber = "+95" + rawPhoneNumber.replaceFirst("^0", ""); // Becomes "+959458345022"
+//        String customerName = cif.getName();
+//
+//        String subject = "Overdue Payment Notification - Loan #" + loan.getId();
+//        String emailBody = String.format(
+//                "Dear %s,\n\nYour loan payment (Schedule #%d) is overdue as of %s.\n" +
+//                        "Due Date: %s\nAmount: %s\nPlease make the payment at your earliest convenience.\n\n" +
+//                        "Regards,\nSME Loan Team",
+//                customerName, schedule.getId(), LocalDate.now(), schedule.getDueDate(),
+//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A"
+//        );
+//
+//        String smsBody = String.format(
+//                "Dear %s, Your loan payment (Schedule #%d) is overdue. " +
+//                        "Amount: %s. Due: %s. Please pay ASAP.",
+//                customerName, schedule.getId(),
+//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+//                schedule.getDueDate()
+//        );
+//
+//        String notificationBody = String.format(
+//                "Loan #%d payment overdue. Amount: %s. Due: %s",
+//                loan.getId(),
+//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+//                schedule.getDueDate()
+//        );
+//
+//        try {
+//            System.out.println("Attempting to send email to " + email + " with body: " + emailBody);
+//            emailService.sendEmail(email, subject, emailBody);
+//            System.out.println("Attempting to send SMS to " + phoneNumber + " with body: " + smsBody);
+//            smsService.sendSms(phoneNumber, smsBody);
+//            System.out.println("Attempting to save notification for account #" + currentAccount.getId());
+//            notificationService.sendSystemNotification(
+//                    currentAccount.getId(),
+//                    "OVERDUE_PAYMENT",
+//                    notificationBody,
+//                    loan.getId()
+//            );
+//            System.out.println("Notifications sent for schedule #" + schedule.getId());
+//            lastNotified.put(schedule.getId(), today); // Update last notified date
+//        } catch (Exception e) {
+//            System.err.println("Failed to send notifications for schedule #" +
+//                    schedule.getId() + ": " + e.getMessage());
+//        }
+//    }
 
     private void processSchedules(List<RepaymentSchedule> schedules, boolean isOverdue) {
         Map<Long, List<RepaymentSchedule>> schedulesByLoan = schedules.stream()

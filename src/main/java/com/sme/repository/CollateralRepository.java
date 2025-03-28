@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,5 +22,14 @@ public interface CollateralRepository extends JpaRepository<Collateral, Long> {
     Page<Collateral> findAll(Pageable pageable);
 
     List<Collateral> findByCifIdAndStatus(Long cifId, Integer status);
+
+    @Query("SELECT SUM(c.value) FROM Collateral c WHERE c.status = 1")
+    Optional<BigDecimal> sumCollateralValue();
+
+    @Query("SELECT COUNT(DISTINCT slc.smeLoan.id) FROM SmeLoanCollateral slc")
+    int countDistinctLoans();
+
+    @Query("SELECT COUNT(c) FROM Collateral c WHERE c.cif.branch.id = :branchId")
+    int countByBranchId(Long branchId);
 
 }

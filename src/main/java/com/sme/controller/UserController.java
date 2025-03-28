@@ -5,6 +5,7 @@ import com.sme.dto.UserDTO;
 import com.sme.entity.Permission;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -83,13 +84,15 @@ public class UserController {
     @GetMapping("/current")
     public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Principal is UserDetails (e.g., org.springframework.security.core.userdetails.User)
-        String email = authentication.getName(); // Email from JWT
-        UserDTO userDTO = userService.getCurrentUser(email);
-        return ResponseEntity.ok(userDTO);
+        try {
+            UserDTO userDTO = userService.getCurrentUser(authentication.getName());
+            return ResponseEntity.ok(userDTO);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     // Add to UserController.java

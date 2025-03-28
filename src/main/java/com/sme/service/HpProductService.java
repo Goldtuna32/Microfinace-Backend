@@ -13,4 +13,6 @@ public interface HpProductService {
     void deleteHpProduct(Long id);
     HpProductDTO restoreHpProduct(Long id);
     String uploadImage(MultipartFile file);
+
+    List<Object[]> countProductsByType();
 }

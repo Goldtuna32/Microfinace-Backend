@@ -223,5 +223,10 @@ public class HpProductServiceImpl implements HpProductService {
         }
     }
 
+    @Override
+    public List<Object[]> countProductsByType() {
+        return hpProductRepository.countProductsGroupedByType();
+    }
+
 
 }

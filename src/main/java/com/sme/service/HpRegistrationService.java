@@ -23,4 +23,8 @@ public interface HpRegistrationService {
     HpRegistrationDTO updateHpRegistration(Long id, HpRegistrationDTO dto);
 
     void deleteHpRegistration(Long id);
+
+    long getTotalHpCount();
+    long getActiveHpCount();
+    List<Object[]> countHpByMonth();
 }

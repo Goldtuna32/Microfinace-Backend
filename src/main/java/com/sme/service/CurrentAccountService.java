@@ -2,6 +2,7 @@ package com.sme.service;
 
 import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.CurrentAccount;
+import com.sme.exception.CurrentAccountNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,5 +30,13 @@ public interface CurrentAccountService {
     Page<CurrentAccountDTO> getAllCurrentAccountsPaginated(int page, int size);
 
     CurrentAccountDTO getCurrentAccountByCifId(Long cifId);
+
+    CurrentAccountDTO getAccountById(Long accountId) throws CurrentAccountNotFoundException;
+
+    List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId);
+
+    List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId);
+
+
 
 }

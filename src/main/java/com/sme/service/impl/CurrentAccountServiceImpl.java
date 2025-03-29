@@ -1,5 +1,6 @@
 package com.sme.service.impl;
 
+import com.sme.dto.CIFDTO;
 import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.Collateral;
 import com.sme.entity.CurrentAccount;
@@ -240,5 +241,36 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
         if (accountDTO.getMinimumBalance().compareTo(accountDTO.getMaximumBalance()) > 0) {
             throw new InvalidBalanceRangeException(accountDTO.getMinimumBalance(), accountDTO.getMaximumBalance());
         }
+    }
+
+    @Override
+    public CurrentAccountDTO getAccountById(Long accountId) throws CurrentAccountNotFoundException {
+        CurrentAccount account = currentAccountRepository.findById(accountId)
+                .orElseThrow(() -> new CurrentAccountNotFoundException(accountId));
+
+        CurrentAccountDTO dto = modelMapper.map(account, CurrentAccountDTO.class);
+
+        // Map additional fields if needed
+        if (account.getCif() != null) {
+            dto.setCifId(account.getCif().getId());
+        }
+
+        return dto;
+    }
+
+    @Override
+    public List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId) {
+        List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
+        return currentAccounts.stream()
+                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
+        List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
+        return currentAccounts.stream()
+                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .collect(Collectors.toList());
     }
 }

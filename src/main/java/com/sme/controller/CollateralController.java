@@ -1,6 +1,7 @@
 package com.sme.controller;
 
 import com.sme.dto.CollateralDTO;
+import com.sme.dto.CurrentAccountDTO;
 import com.sme.dto.SmeLoanCollateralDTO;
 import com.sme.entity.SmeLoanCollateral;
 import com.sme.repository.CollateralRepository;
@@ -203,5 +204,21 @@ public class CollateralController {
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
+    }
+
+    @PreAuthorize("hasAuthority('COLLATERAL_READ')")
+    @GetMapping("/activeCollateral")
+    public ResponseEntity<List<CollateralDTO>> getAllCollaterals(
+            @RequestParam(required = false) Long branchId) {
+        List<CollateralDTO> collateralDTOS = collateralService.getAllCollateral(branchId);
+        return ResponseEntity.ok(collateralDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('CURRENT_ACCOUNT_READ')")
+    @GetMapping("/inactiveCollateral")
+    public ResponseEntity<List<CollateralDTO>> getFreezeCurrentAccounts(
+            @RequestParam(required = false) Long branchId) {
+        List<CollateralDTO> collateralDTOS = collateralService.getFreeezeCurrentAccountsByBranch(branchId);
+        return ResponseEntity.ok(collateralDTOS);
     }
 }

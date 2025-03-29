@@ -5,6 +5,7 @@ import com.sme.dto.UserDTO;
 import com.sme.entity.Permission;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,25 +38,25 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/inactive")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_READ')")
     public ResponseEntity<List<UserDTO>> getAllInactiveUsers() {
         return ResponseEntity.ok(userService.getAllInactiveUsers());
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_UPDATE')")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable Long id,
             @RequestPart("user") String userJson,
@@ -64,39 +65,35 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, userDTO, file));
     }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) throws IOException {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
 
     @DeleteMapping("/soft/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_DELETE')")
     public ResponseEntity<Void> softDeleteUser(@PathVariable Long id) {
         userService.softDeleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/restore/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER_DELETE')")
     public ResponseEntity<Void> restoreUser(@PathVariable Long id) {
         userService.restoreUser(id);
         return ResponseEntity.ok().build();
     }
 
 
-//    @GetMapping("/current")
-//    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
-//        if (authentication == null || !authentication.isAuthenticated()) {
-//            return ResponseEntity.status(401).build();
-//        }
-//
-//        // Principal is UserDetails (e.g., org.springframework.security.core.userdetails.User)
-//        String email = authentication.getName(); // Email from JWT
-//        UserDTO userDTO = userService.getCurrentUser(email);
-//        return ResponseEntity.ok(userDTO);
-//    }
+    @GetMapping("/current")
+    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            UserDTO userDTO = userService.getCurrentUser(authentication.getName());
+            return ResponseEntity.ok(userDTO);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
 
     // Add to UserController.java
     @GetMapping("/permissions")

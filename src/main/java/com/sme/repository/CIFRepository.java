@@ -37,5 +37,22 @@ public interface CIFRepository extends JpaRepository<CIF, Long> {
     boolean existsByPhoneNumber(String phoneNumber);
     boolean existsByEmail(String email);
 
+    long countByStatus(int status);
 
+    int countByBranchId(Long branchId);
+    int countByBranchIdAndStatus(Long branchId, Integer status);
+
+    @Query("SELECT c FROM CIF c WHERE c.status = 1 " +
+            "AND (:branchId IS NULL OR c.branch.id = :branchId) " +
+            "AND (:nrcPrefix IS NULL OR c.nrcNumber LIKE :nrcPrefix%)")
+    List<CIF> findActiveCIFsByBranch(
+            @Param("branchId") Long branchId,
+            @Param("nrcPrefix") String nrcPrefix);
+
+    @Query("SELECT c FROM CIF c WHERE c.status = 2 " +
+            "AND (:branchId IS NULL OR c.branch.id = :branchId) " +
+            "AND (:nrcPrefix IS NULL OR c.nrcNumber LIKE :nrcPrefix%)")
+    List<CIF> findDeletedCIFsByBranch(
+            @Param("branchId") Long branchId,
+            @Param("nrcPrefix") String nrcPrefix);
 }

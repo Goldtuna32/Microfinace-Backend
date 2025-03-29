@@ -1,5 +1,6 @@
 package com.sme.repository;
 
+import com.sme.entity.CIF;
 import com.sme.entity.CurrentAccount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,5 +26,18 @@ public interface CurrentAccountRepository extends JpaRepository<CurrentAccount, 
 
     @Query("SELECT ca FROM CurrentAccount ca WHERE ca.cif.serialNumber = :serialNumber")
     List<CurrentAccount> findByCifSerialNumber(String serialNumber);
+
+    @Query("SELECT COUNT(ca) FROM CurrentAccount ca WHERE ca.cif.branch.id = :branchId")
+    int countByBranchId(Long branchId);
+
+    @Query("SELECT ca FROM CurrentAccount ca WHERE ca.status = 1 " +
+            "AND (:branchId IS NULL OR ca.cif.branch.id = :branchId)")
+    List<CurrentAccount> findActiveCurrentAccount(
+            @Param("branchId") Long branchId);
+
+    @Query("SELECT ca FROM CurrentAccount ca WHERE ca.status = 2 " +
+            "AND (:branchId IS NULL OR ca.cif.branch.id = :branchId)")
+    List<CurrentAccount> findFreezeCurrentAccount(
+            @Param("branchId") Long branchId);
 }
 

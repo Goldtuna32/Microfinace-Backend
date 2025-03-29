@@ -1,9 +1,6 @@
 package com.sme.service.impl;
 
-import com.sme.dto.AccountTransactionDTO;
-import com.sme.dto.CIFDTO;
-import com.sme.dto.CollateralDTO;
-import com.sme.dto.CurrentAccountDTO;
+import com.sme.dto.*;
 import com.sme.entity.AccountTransaction;
 import com.sme.repository.AccountTransactionRepository;
 import com.sme.service.*;
@@ -11,10 +8,12 @@ import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
+import net.sf.jasperreports.engine.util.JRLoader;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +45,36 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private AccountTransactionRepository transactionRepository;
+
+    @Autowired
+    private SmeLoanRegistrationService loanService;
+
+    @Override
+    public byte[] generateLoanDetailReport(Long loanId, String format) throws Exception {
+        // Get loan data
+        SmeLoanRegistrationDTO loan = loanService.getLoanDetailsById(loanId);
+
+        // Prepare parameters
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("loan", loan);
+        parameters.put("collaterals", new JRBeanCollectionDataSource(loan.getCollaterals()));
+
+        // Load the JasperReport template
+        InputStream reportStream = new ClassPathResource("reports/loan_detail.jrxml").getInputStream();
+        JasperReport jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
+
+        // Fill the report
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, new JREmptyDataSource());
+
+        // Export based on format
+        if ("pdf".equalsIgnoreCase(format)) {
+            return JasperExportManager.exportReportToPdf(jasperPrint);
+        } else if ("excel".equalsIgnoreCase(format)) {
+            return exportToExcel(jasperPrint);
+        } else {
+            throw new IllegalArgumentException("Unsupported report format: " + format);
+        }
+    }
 
 
     @Override

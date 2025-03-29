@@ -1,5 +1,8 @@
 package com.sme.service.impl;
 
+import com.sme.dto.PermissionDTO;
+import com.sme.dto.RoleDTO;
+import com.sme.dto.RolePermissionDTO;
 import com.sme.entity.Permission;
 import com.sme.entity.Role;
 import com.sme.entity.RolePermission;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class RolePermissionServiceImpl implements RolePermissionService {
@@ -29,15 +33,40 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         this.permissionRepository = permissionRepository;
     }
 
+    private RoleDTO toRoleDTO(Role role) {
+        RoleDTO roleDTO = new RoleDTO();
+        roleDTO.setId(role.getId());
+        roleDTO.setName(role.getName());
+        roleDTO.setDescription(role.getDescription());
+        // Permissions might not be needed here unless specifically requested
+        return roleDTO;
+    }
+
+    private PermissionDTO toPermissionDTO(Permission permission) {
+        PermissionDTO permissionDTO = new PermissionDTO();
+        permissionDTO.setId(permission.getId());
+        permissionDTO.setName(permission.getName());
+        permissionDTO.setPermissionFunction(permission.getPermissionFunction());
+        permissionDTO.setDescription(permission.getDescription());
+        return permissionDTO;
+    }
+
+    private RolePermissionDTO toRolePermissionDTO(RolePermission rolePermission) {
+        RolePermissionDTO dto = new RolePermissionDTO();
+        dto.setId(rolePermission.getId());
+        dto.setRole(toRoleDTO(rolePermission.getRole()));
+        dto.setPermission(toPermissionDTO(rolePermission.getPermission()));
+        return dto;
+    }
+
     @Override
     @Transactional
-    public RolePermission createRolePermission(Long roleId, Long permissionId) {
-        Role role = roleRepository.findById((long) roleId.intValue())
+    public RolePermissionDTO createRolePermission(Long roleId, Long permissionId) {
+        Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new RuntimeException("Permission not found"));
 
-        // Check for duplicates
         if (rolePermissionRepository.findByRoleId(role.getId()).stream()
                 .anyMatch(rp -> rp.getPermission().getId().equals(permissionId))) {
             throw new RuntimeException("Permission already assigned to this role");
@@ -46,35 +75,40 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         RolePermission rolePermission = new RolePermission();
         rolePermission.setRole(role);
         rolePermission.setPermission(permission);
-        return rolePermissionRepository.save(rolePermission);
+        RolePermission saved = rolePermissionRepository.save(rolePermission);
+        return toRolePermissionDTO(saved);
     }
 
     @Override
-    public List<RolePermission> getAllRolePermissions() {
-        return rolePermissionRepository.findAll();
+    public List<RolePermissionDTO> getAllRolePermissions() {
+        return rolePermissionRepository.findAll().stream()
+                .map(this::toRolePermissionDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<RolePermission> getRolePermissionsByRoleId(Long roleId) {
-        return rolePermissionRepository.findByRoleId((long) roleId.intValue());
+    public List<RolePermissionDTO> getRolePermissionsByRoleId(Long roleId) {
+        return rolePermissionRepository.findByRoleId(roleId).stream()
+                .map(this::toRolePermissionDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public RolePermission updateRolePermission(Long id, Long newPermissionId) {
+    public RolePermissionDTO updateRolePermission(Long id, Long newPermissionId) {
         RolePermission rolePermission = rolePermissionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("RolePermission not found"));
         Permission newPermission = permissionRepository.findById(newPermissionId)
                 .orElseThrow(() -> new RuntimeException("Permission not found"));
 
-        // Check if the new permission is already assigned to the role
         if (rolePermissionRepository.findByRoleId(rolePermission.getRole().getId()).stream()
                 .anyMatch(rp -> rp.getPermission().getId().equals(newPermissionId) && !rp.getId().equals(id))) {
             throw new RuntimeException("New permission already assigned to this role");
         }
 
         rolePermission.setPermission(newPermission);
-        return rolePermissionRepository.save(rolePermission);
+        RolePermission updated = rolePermissionRepository.save(rolePermission);
+        return toRolePermissionDTO(updated);
     }
 
     @Override

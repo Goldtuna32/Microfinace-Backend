@@ -16,14 +16,14 @@ public class RepaymentScheduleController {
     @Autowired
     private RepaymentScheduleService repaymentScheduleService;
 
-    @PreAuthorize("hasRole('REPAYMENT_SCHEDULE_GENERATE')")
+    @PreAuthorize("hasRole('LOAN_READ')")
     @PostMapping("/generate/{loanId}")
     public ResponseEntity<String> generateSchedule(@PathVariable("loanId") Long loanId) {
         repaymentScheduleService.generateRepaymentSchedule(loanId);
         return ResponseEntity.ok("Repayment schedule generated for loan ID: " + loanId);
     }
 
-    @PreAuthorize("hasRole('REPAYMENT_SCHEDULE_READ')")
+    @PreAuthorize("hasRole('LOAN_READ')")
     @GetMapping("/{loanId}")
     public ResponseEntity<List<RepaymentScheduleDTO>> getSchedule(@PathVariable Long loanId) {
         List<RepaymentScheduleDTO> schedule = repaymentScheduleService.getRepaymentSchedule(loanId);

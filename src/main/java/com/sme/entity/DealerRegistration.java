@@ -44,4 +44,5 @@ public class DealerRegistration {
 
     private boolean deleted = false; // Soft delete flag
 
- }
+
+}

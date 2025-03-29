@@ -8,6 +8,7 @@ import com.sme.repository.*;
 import com.sme.service.CloudinaryService;
 import com.sme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.info.GitProperties;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,13 +32,14 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
-    private final UserPermissionRepository userPermissionRepository;
+//    private final UserPermissionRepository userPermissionRepository;
+    private User user;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
                            BranchRepository branchRepository, CloudinaryService cloudinaryService,
                            PasswordEncoder passwordEncoder, UserMapper userMapper, PermissionRepository permissionRepository,
-                           RolePermissionRepository rolePermissionRepository, UserPermissionRepository userPermissionRepository) {
+                           RolePermissionRepository rolePermissionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
@@ -46,7 +48,7 @@ public class UserServiceImpl implements UserService {
         this.userMapper = userMapper;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
-        this.userPermissionRepository = userPermissionRepository;
+//        this.userPermissionRepository = userPermissionRepository;
     }
 
     @Override
@@ -244,6 +246,9 @@ public class UserServiceImpl implements UserService {
     public List<Permission> getAllPermissions() {
         return permissionRepository.findAll();
     }
+
+
+
 
     private UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();

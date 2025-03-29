@@ -10,4 +10,5 @@ public interface CollateralTypeService {
     List<CollateralType> getAllDeletedCollateralTypes();
     CollateralType updateCollateralType(Long id, CollateralType collateralType);
     void softDeleteCollateralType(Long id);
+    void restoreCollateralType(Long id);
 }

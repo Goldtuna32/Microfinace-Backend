@@ -2,11 +2,14 @@ package com.sme.controller;
 
 import com.sme.dto.CollateralTypeDTO;
 import com.sme.entity.CollateralType;
+import com.sme.exception.CollateralTypeNotFoundException;
 import com.sme.repository.CollateralTypeRepository;
 import com.sme.service.CollateralTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -108,4 +111,20 @@ public class CollateralTypeController {
         service.softDeleteCollateralType(id);
         return ResponseEntity.noContent().build();
     }
+//    @PreAuthorize("hasRole('COLLATERAL_TYPE_RESTORE')")
+    @PutMapping("/restore/{id}")
+    public ResponseEntity<String> restoreCollateralType(@PathVariable Long id, Authentication authentication) {
+        System.out.println("Authenticated user roles: " + authentication.getAuthorities());
+        try {
+            service.restoreCollateralType(id);
+            return ResponseEntity.ok("Collateral type restored successfully.");
+        } catch (CollateralTypeNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to restore collateral type: " + e.getMessage());
+        }
+    }
+
+
 }

@@ -94,6 +94,22 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
         }
     }
 
+    @Override
+    public void restoreCollateralType(Long id) {
+        try {
+            Optional<CollateralType> optionalCollateralType = repository.findById(id);
+            if (optionalCollateralType.isPresent()) {
+                CollateralType collateralType = optionalCollateralType.get();
+                collateralType.setStatus(1); // Restore to active status
+                repository.save(collateralType);
+            } else {
+                throw new CollateralTypeNotFoundException("Collateral type not found with id: " + id);
+            }
+        } catch (Exception e) {
+            throw new CollateralTypeCreationException("Failed to restore collateral type with id: " + id, e);
+        }
+    }
+
     private void validateCollateralType(CollateralType collateralType) {
         // Required field validation
         if (collateralType.getName() == null || collateralType.getName().trim().isEmpty()) {
@@ -113,4 +129,6 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
             throw new InvalidStatusException(collateralType.getStatus());
         }
     }
+
+
 }

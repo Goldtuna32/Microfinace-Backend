@@ -2,6 +2,7 @@ package com.sme.service.impl;
 
 import com.sme.dto.DealerRegistrationDTO;
 import com.sme.entity.Address;
+import com.sme.entity.Branch;
 import com.sme.entity.CurrentAccount;
 import com.sme.entity.DealerRegistration;
 import com.sme.exception.*;
@@ -9,8 +10,11 @@ import com.sme.repository.AddressRepository;
 import com.sme.repository.CurrentAccountRepository;
 import com.sme.repository.DealerRegistrationRepository;
 import com.sme.service.DealerRegistrationService;
+import com.sme.service.UserService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,10 +37,14 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
     @Autowired
     private CurrentAccountRepository currentAccountRepository;
 
+
+
+
     @Override
     @Transactional
     public DealerRegistrationDTO createDealer(DealerRegistrationDTO dto) {
         validateDealerDTO(dto);
+
 
         if (dto.getCompanyName() != null && dealerRepository.existsByCompanyName(dto.getCompanyName())) {
             throw new DuplicateDealerException(dto.getCompanyName());
@@ -59,6 +67,7 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
             dealer.setCurrentAccount(currentAccount);
             dealer.setRegistrationDate(LocalDateTime.now());
             dealer.setStatus(1); // Default to active
+
 
             dealer = dealerRepository.save(dealer);
             return modelMapper.map(dealer, DealerRegistrationDTO.class);

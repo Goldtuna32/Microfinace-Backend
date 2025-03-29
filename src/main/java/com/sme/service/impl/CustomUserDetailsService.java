@@ -2,6 +2,7 @@ package com.sme.service.impl;
 
 import com.sme.entity.User;
 import com.sme.repository.UserRepository;
+import org.springframework.boot.info.GitProperties;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails; // Correct import
@@ -40,4 +41,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 Collections.singletonList(authority)
         );
     }
+
+
 }

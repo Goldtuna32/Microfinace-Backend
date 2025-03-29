@@ -11,4 +11,7 @@ public interface DealerRegistrationService {
    DealerRegistrationDTO getDealer(Long id);
    void deleteDealer(Long id);
    List<DealerRegistrationDTO> getAllDealerRegistrations();
+
+   List<DealerRegistrationDTO> getAllActiveDealer(Long branchId);
+   List<DealerRegistrationDTO> getAllInActiveDealer(Long branchId);
 }

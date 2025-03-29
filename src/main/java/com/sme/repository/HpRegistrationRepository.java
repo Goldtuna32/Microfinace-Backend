@@ -3,6 +3,7 @@ package com.sme.repository;
 import com.sme.entity.HpRegistration;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,4 +23,16 @@ public interface HpRegistrationRepository extends JpaRepository<HpRegistration, 
 
     @Query("SELECT COUNT(hr) FROM HpRegistration hr WHERE hr.currentAccount.cif.branch.id = :branchId AND hr.status = :status")
     int countByBranchIdAndStatus(Long branchId, Integer status);
+
+    @Query("SELECT h FROM HpRegistration h " +
+            "LEFT JOIN FETCH h.currentAccount " +
+            "WHERE h.status = 3 " + // Pending status
+            "AND (:branchId IS NULL OR h.currentAccount.cif.branch.id = :branchId)")
+    List<HpRegistration> findPendingHP(@Param("branchId") Long branchId);
+
+    @Query("SELECT h FROM HpRegistration h " +
+            "LEFT JOIN FETCH h.currentAccount " +
+            "WHERE h.status = 4 " + // Approved status
+            "AND (:branchId IS NULL OR h.currentAccount.cif.branch.id = :branchId)")
+    List<HpRegistration> findApprovedHP(@Param("branchId") Long branchId);
 }

@@ -6,6 +6,8 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.sme.dto.CurrentAccountDTO;
+import com.sme.entity.CurrentAccount;
 import com.sme.exception.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -304,6 +306,22 @@ public class CollateralServiceImpl implements CollateralService {
         BigDecimal totalValue = getTotalCollateralValue();
         long loanCount = collateralRepository.countDistinctLoans();
         return loanCount > 0 ? totalValue.divide(BigDecimal.valueOf(loanCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    @Override
+    public List<CollateralDTO> getAllCollateral(Long branchId) {
+        List<Collateral> collaterals = collateralRepository.findActiveCollateral(branchId);
+        return collaterals.stream()
+                .map(collateral -> modelMapper.map(collaterals, CollateralDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CollateralDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
+        List<Collateral> collaterals = collateralRepository.findInActiveCollateral(branchId);
+        return collaterals.stream()
+                .map(collateral -> modelMapper.map(collaterals, CollateralDTO.class))
+                .collect(Collectors.toList());
     }
 
 }

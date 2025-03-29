@@ -7,4 +7,8 @@ public class InsufficientFundsException extends TransactionValidationException {
     public InsufficientFundsException(BigDecimal balance, BigDecimal minimumBalance) {
         super("Insufficient funds. Balance (" + balance + ") below minimum required (" + minimumBalance + ")");
     }
+
+    public InsufficientFundsException(String message) {
+        super(message);
+    }
 }

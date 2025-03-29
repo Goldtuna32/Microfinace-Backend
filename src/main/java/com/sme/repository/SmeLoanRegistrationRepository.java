@@ -1,6 +1,7 @@
 package com.sme.repository;
 
 import com.sme.entity.CIF;
+import com.sme.entity.CurrentAccount;
 import com.sme.entity.SmeLoanRegistration;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,4 +37,14 @@ public interface SmeLoanRegistrationRepository extends JpaRepository<SmeLoanRegi
 
     @Query("SELECT COUNT(slr) FROM SmeLoanRegistration slr WHERE slr.currentAccount.cif.branch.id = :branchId AND slr.status = :status")
     int countByBranchIdAndStatus(Long branchId, Integer status);
+
+    @Query("SELECT s FROM SmeLoanRegistration s WHERE s.status = 3 " +
+            "AND (:branchId IS  NULL OR s.currentAccount.cif.branch.id = :branchId)")
+    List<SmeLoanRegistration> findPendingLoans(
+            @Param("branchId") Long branchId);
+
+    @Query("SELECT s FROM SmeLoanRegistration s WHERE s.status = 4 " +
+            "AND (:branchId IS NULL OR s.currentAccount.cif.branch.id = :branchId)")
+    List<SmeLoanRegistration> findApprovedLoans(
+            @Param("branchId") Long branchId);
 }

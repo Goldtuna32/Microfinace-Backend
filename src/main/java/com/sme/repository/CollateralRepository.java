@@ -1,6 +1,7 @@
 package com.sme.repository;
 
 import com.sme.entity.Collateral;
+import com.sme.entity.CurrentAccount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,4 +33,14 @@ public interface CollateralRepository extends JpaRepository<Collateral, Long> {
     @Query("SELECT COUNT(c) FROM Collateral c WHERE c.cif.branch.id = :branchId")
     int countByBranchId(Long branchId);
 
+
+    @Query("SELECT c FROM Collateral c WHERE c.status = 1 " +
+            "AND (:branchId IS NULL OR c.cif.branch.id = :branchId)")
+    List<Collateral> findActiveCollateral(
+            @Param("branchId") Long branchId);
+
+    @Query("SELECT c FROM Collateral c WHERE c.status = 2 " +
+            "AND (:branchId IS NULL OR c.cif.branch.id = :branchId)")
+    List<Collateral> findInActiveCollateral(
+            @Param("branchId") Long branchId);
 }

@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,4 +28,9 @@ public interface HpRegistrationService {
     long getTotalHpCount();
     long getActiveHpCount();
     List<Object[]> countHpByMonth();
+
+    List<HpRegistrationDTO> getAllPendingHP(Long branchId);
+    List<HpRegistrationDTO> getAllApprovedHP(Long branchId);
+
+//    HpRegistrationDTO approveHpRegistration(Long registrationId, BigDecimal remainingAmount) throws Exception;
 }

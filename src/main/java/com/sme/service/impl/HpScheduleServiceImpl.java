@@ -94,7 +94,7 @@ public class HpScheduleServiceImpl implements HpScheduleService {
         System.out.println("BMF Percentage: " + bmf.multiply(BigDecimal.valueOf(100)).setScale(6, BigDecimal.ROUND_HALF_UP) + "%");
 
         BigDecimal remainingBalance = loanAmount;
-        LocalDate currentDate = hpRegistration.getStartDate().toLocalDate();
+        LocalDate currentDate = hpRegistration.getStartDate();
 
         // // Add initial row
         // HpSchedule initialSchedule = new HpSchedule();

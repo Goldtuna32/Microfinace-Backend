@@ -46,4 +46,7 @@ public interface SmeLoanRegistrationService {
     List<Object[]> countLoansByMonth();
     List<SmeLoanRegistration> findRecentLoans(int limit);
 
+    List<SmeLoanRegistrationDTO> getAllPendingLoans(Long branchId);
+    List<SmeLoanRegistrationDTO> getAllApprovedLoans(Long branchId);
+
 }

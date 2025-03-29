@@ -83,22 +83,22 @@ public class ReportController {
                 .body(resource);
     }
 
-    @GetMapping("/hp-product")
-    public ResponseEntity<Resource> generateHpProductReport(
-            @RequestParam Long dealerRegistrationId,
-            @RequestParam String format) throws Exception {
-
-        byte[] reportBytes = reportService.generateHpProductReport(dealerRegistrationId, format);
-        String contentType = format.equals("pdf") ? MediaType.APPLICATION_PDF_VALUE :
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-        String extension = format.equals("pdf") ? "pdf" : "xlsx";
-
-        ByteArrayResource resource = new ByteArrayResource(reportBytes);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hp_product_report." + extension)
-                .contentType(MediaType.parseMediaType(contentType))
-                .body(resource);
-    }
+//    @GetMapping("/hp-product")
+//    public ResponseEntity<Resource> generateHpProductReport(
+//            @RequestParam Long dealerRegistrationId,
+//            @RequestParam String format) throws Exception {
+//
+//        byte[] reportBytes = reportService.generateHpProductReport(dealerRegistrationId, format);
+//        String contentType = format.equals("pdf") ? MediaType.APPLICATION_PDF_VALUE :
+//                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+//        String extension = format.equals("pdf") ? "pdf" : "xlsx";
+//
+//        ByteArrayResource resource = new ByteArrayResource(reportBytes);
+//        return ResponseEntity.ok()
+//                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hp_product_report." + extension)
+//                .contentType(MediaType.parseMediaType(contentType))
+//                .body(resource);
+//    }
 
     @GetMapping("/loan/{loanId}")
     public ResponseEntity<byte[]> generateLoanReport(@PathVariable Long loanId,

@@ -19,6 +19,6 @@ public class HpRegistrationDTO {
     @JsonIgnore
     private LocalDateTime endDate;
     private Integer status;
-    private Long currentAccount;
-    private Long hpProduct;
+    private Long currentAccountId;
+    private Long hpProductId;
 }

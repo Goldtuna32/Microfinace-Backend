@@ -302,4 +302,38 @@ public class CIFServiceImpl implements CIFService {
         }
     }
 
+    @Override
+    public CIFDTO getCifById(Long cifId) throws CIFNotFoundException {
+        CIF cif = cifRepository.findById(cifId)
+                .orElseThrow(() -> new CIFNotFoundException(cifId));
+
+        return modelMapper.map(cif, CIFDTO.class);
+    }
+
+    @Override
+    public long getTotalCifCount() {
+        return cifRepository.count();
+    }
+
+    @Override
+    public long getActiveCifCount() {
+        return cifRepository.countByStatus(1); // Assuming 1 is active status
+    }
+
+    @Override
+    public List<CIFDTO> getAllCIFsByBranch(Long branchId, String nrcPrefix) {
+        List<CIF> cifs = cifRepository.findActiveCIFsByBranch(branchId, nrcPrefix);
+        return cifs.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CIFDTO> getDeletedCIFsByBranch(Long branchId, String nrcPrefix) {
+        List<CIF> cifs = cifRepository.findDeletedCIFsByBranch(branchId, nrcPrefix);
+        return cifs.stream()
+                .map(cif -> modelMapper.map(cif, CIFDTO.class))
+                .collect(Collectors.toList());
+    }
+
 }

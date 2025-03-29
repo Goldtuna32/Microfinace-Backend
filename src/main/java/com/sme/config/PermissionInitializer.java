@@ -71,8 +71,23 @@ public class PermissionInitializer {
                 Map.of("function", "HP_PRODUCT", "name", "READ", "description", "Read HP products"),
                 Map.of("function", "HP_PRODUCT", "name", "UPDATE", "description", "Update HP products"),
                 Map.of("function", "HP_PRODUCT", "name", "DELETE", "description", "Delete HP products"),
+
+                // HP_REGISTER permissions
+                Map.of("function", "HP_REGISTER", "name", "CREATE", "description", "Create HP register"),
+                Map.of("function", "HP_REGISTER", "name", "READ", "description", "Read HP register"),
+                Map.of("function", "HP_REGISTER", "name", "UPDATE", "description", "Update HP register"),
+                Map.of("function", "HP_REGISTER", "name", "DELETE", "description", "Delete HP register"),
+
+                // USER permission
+                Map.of("function", "USER", "name", "CREATE", "description", "Create User"),
+                Map.of("function", "USER", "name", "READ", "description", "Read User"),
+                Map.of("function", "USER", "name", "UPDATE", "description", "Update User"),
+                Map.of("function", "USER", "name", "DELETE", "description", "Delete User"),
                 // ROLE permission (for creating roles)
-                Map.of("function", "ROLE", "name", "CREATE", "description", "Create roles")
+                Map.of("function", "ROLE", "name", "CREATE", "description", "Create roles"),
+                Map.of("function", "ROLE", "name", "READ", "description", "Read roles"),
+                Map.of("function", "ROLE", "name", "UPDATE", "description", "Update roles"),
+                Map.of("function", "ROLE", "name", "DELETE", "description", "Delete roles")
         );
 
         // Check if the permission table is empty and populate it

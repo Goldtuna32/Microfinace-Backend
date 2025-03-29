@@ -1,24 +1,19 @@
 package com.sme.service.impl;
 
-import com.sme.dto.AccountTransactionDTO;
-import com.sme.dto.CIFDTO;
-import com.sme.dto.HpProductDTO;
+import com.sme.dto.*;
 import com.sme.entity.AccountTransaction;
-import com.sme.entity.DealerRegistration;
-import com.sme.entity.HpProduct;
 import com.sme.repository.AccountTransactionRepository;
-import com.sme.repository.DealerRegistrationRepository;
-import com.sme.repository.HpProductRepository;
-import com.sme.service.CIFService;
-import com.sme.service.ReportService;
+import com.sme.service.*;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
+import net.sf.jasperreports.engine.util.JRLoader;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -26,13 +21,9 @@ import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-
 
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -44,13 +35,47 @@ public class ReportServiceImpl implements ReportService {
     private DataSource dataSource;
 
     @Autowired
+    private CurrentAccountService currentAccountService;
+
+    @Autowired
+    private CollateralService collateralService;
+
+    @Autowired
+    private AccountTransactionService accountTransactionService;
+
+    @Autowired
     private AccountTransactionRepository transactionRepository;
 
     @Autowired
-    private HpProductRepository hpProductRepository;
+    private SmeLoanRegistrationService loanService;
 
-    @Autowired
-    private DealerRegistrationRepository dealerRegistrationRepository;
+    @Override
+    public byte[] generateLoanDetailReport(Long loanId, String format) throws Exception {
+        // Get loan data
+        SmeLoanRegistrationDTO loan = loanService.getLoanDetailsById(loanId);
+
+        // Prepare parameters
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("loan", loan);
+        parameters.put("collaterals", new JRBeanCollectionDataSource(loan.getCollaterals()));
+
+        // Load the JasperReport template
+        InputStream reportStream = new ClassPathResource("reports/loan_detail.jrxml").getInputStream();
+        JasperReport jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
+
+        // Fill the report
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, new JREmptyDataSource());
+
+        // Export based on format
+        if ("pdf".equalsIgnoreCase(format)) {
+            return JasperExportManager.exportReportToPdf(jasperPrint);
+        } else if ("excel".equalsIgnoreCase(format)) {
+            return exportToExcel(jasperPrint);
+        } else {
+            throw new IllegalArgumentException("Unsupported report format: " + format);
+        }
+    }
+
 
     @Override
     public byte[] generateActiveCIFReport(String format) throws Exception {
@@ -95,40 +120,158 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public byte[] generateHpProductReport(Long dealerRegistrationId, String format) throws Exception {
-        // Fetch data
-        List<HpProductDTO> products = hpProductRepository.findByDealerRegistrationId(dealerRegistrationId)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    public byte[] generateCIFDetailReport(Long cifId, String format) throws Exception {
+        System.out.println("Starting report generation for CIF ID: " + cifId);
+        long startTime = System.currentTimeMillis();
 
-        if (products.isEmpty()) {
-            throw new Exception("No HP products found for dealer ID: " + dealerRegistrationId);
+        Optional<CIFDTO> cifOptional = cifService.getCIFById(cifId);
+        if (!cifOptional.isPresent()) {
+            throw new Exception("CIF not found with ID: " + cifId);
         }
+        CIFDTO cif = cifOptional.get();
+        System.out.println("CIF fetched: " + cif.getSerialNumber());
 
-        // Fetch dealer name (assuming you have a method to get the dealer by registration ID)
-        DealerRegistration dealer = dealerRegistrationRepository.findById(dealerRegistrationId)
-                .orElseThrow(() -> new Exception("Dealer not found for ID: " + dealerRegistrationId));
+        // Fetch related data
+        CurrentAccountDTO currentAccount = cif.isHasCurrentAccount() ?
+                currentAccountService.getCurrentAccountByCifId(cifId) : null;
+        System.out.println("Current account: " + (currentAccount != null ? currentAccount.getAccountNumber() : "N/A"));
 
-        // Load JRXML file
-        InputStream reportStream = this.getClass().getResourceAsStream("/reports/hp_product_report.jrxml");
-        if (reportStream == null) {
-            throw new Exception("Report template not found.");
+        // Fetch detailed transactions (for the table)
+        List<AccountTransactionDTO> transactions = currentAccount != null ?
+                new ArrayList<>(new LinkedHashSet<>(accountTransactionService.getTransactionsByCurrentAccount(currentAccount.getId()))) : Collections.emptyList();
+        System.out.println("Transactions fetched: " + transactions.size());
+
+        // Summarize transactions for the chart
+        List<Map<String, Object>> summarizedTransactions = new ArrayList<>();
+        if (!transactions.isEmpty()) {
+            Map<String, BigDecimal> summaryMap = transactions.stream()
+                    .collect(Collectors.groupingBy(
+                            AccountTransactionDTO::getTransactionType,
+                            Collectors.reducing(
+                                    BigDecimal.ZERO,
+                                    AccountTransactionDTO::getAmount,
+                                    BigDecimal::add
+                            )
+                    ));
+            summaryMap.forEach((type, totalAmount) -> {
+                Map<String, Object> summary = new HashMap<>();
+                summary.put("transactionType", type);
+                summary.put("amount", totalAmount);
+                summarizedTransactions.add(summary);
+            });
         }
+        System.out.println("Summarized transactions: " + summarizedTransactions.size());
 
-        JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
-        JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(products);
+        List<CollateralDTO> collaterals = new ArrayList<>(new LinkedHashSet<>(collateralService.getCollateralsByCifId(cifId)));
+        System.out.println("Collaterals fetched: " + collaterals.size());
 
-        // Report Parameters
+        // Prepare data map
+        Map<String, Object> cifData = new HashMap<>();
+        cifData.put("name", cif.getName());
+        cifData.put("nrcNumber", cif.getNrcNumber());
+        cifData.put("dob", cif.getDob());
+        cifData.put("gender", cif.getGender());
+        cifData.put("phoneNumber", cif.getPhoneNumber());
+        cifData.put("email", cif.getEmail());
+        cifData.put("address", cif.getAddress());
+        cifData.put("maritalStatus", cif.getMaritalStatus());
+        cifData.put("occupation", cif.getOccupation());
+        cifData.put("incomeSource", cif.getIncomeSource());
+        cifData.put("serialNumber", cif.getSerialNumber());
+        cifData.put("createdAt", cif.getCreatedAt());
+        cifData.put("branchId", cif.getBranchId());
+        cifData.put("hasCurrentAccount", cif.isHasCurrentAccount());
+        cifData.put("fNrcPhotoUrl", cif.getFNrcPhotoUrl());
+        cifData.put("bNrcPhotoUrl", cif.getBNrcPhotoUrl());
+        cifData.put("currentAccount", currentAccount);
+        cifData.put("transactions", transactions);
+        cifData.put("summarizedTransactions", summarizedTransactions);
+        cifData.put("collaterals", collaterals);
+
+        JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(Collections.singletonList(cifData));
+        System.out.println("Data source prepared");
+
+        // Compile main report
+        InputStream mainReportStream = this.getClass().getResourceAsStream("/reports/cif_detail_report.jrxml");
+        if (mainReportStream == null) {
+            throw new Exception("Cannot find JRXML file at: /reports/cif_detail_report.jrxml");
+        }
+        JasperReport jasperReport = JasperCompileManager.compileReport(mainReportStream);
+        System.out.println("Main report compiled");
+
+        // Compile subreports dynamically
+        JasperReport collateralSubreport = compileSubreport("/reports/collateral_subreport.jrxml");
+        JasperReport transactionSubreport = compileSubreport("/reports/transaction_subreport.jrxml");
+        JasperReport transactionPieSubreport = compileSubreport("/reports/transaction_pie_subreport.jrxml");
+
+        // Pass compiled subreports and lists as parameters
         Map<String, Object> parameters = new HashMap<>();
-        parameters.put("DEALER_NAME", dealer.getCompanyName());
-        System.out.println(dealer.getCompanyName());
-        parameters.put("CREATED_DATE", LocalDate.now());
+        parameters.put("REPORT_TITLE", "CIF Detail Report - " + cif.getSerialNumber());
+        parameters.put("CREATED_DATE", LocalDateTime.now());
+        parameters.put("TRANSACTION_LIST", transactions); // Set TRANSACTION_LIST
+        parameters.put("SUMMARIZED_TRANSACTIONS", summarizedTransactions);
+        parameters.put("COLLATERAL_LIST", collaterals);   // Set COLLATERAL_LIST
 
-        // Fill report
+        if (collateralSubreport != null) {
+            parameters.put("COLLATERAL_SUBREPORT", collateralSubreport);
+            System.out.println("Collateral Subreport: " + collateralSubreport);
+        } else {
+            System.out.println("Collateral Subreport is null");
+        }
+        if (transactionPieSubreport != null) {
+            parameters.put("TRANSACTION_PIE_SUBREPORT", transactionPieSubreport);
+            System.out.println("Transaction Pie Subreport: " + transactionPieSubreport);
+        } else {
+            System.out.println(("Transaction Pie Subreport is Null"));
+        }
+        if (transactionSubreport != null) {
+            parameters.put("TRANSACTION_SUBREPORT", transactionSubreport);
+            System.out.println("Transaction Subreport: " + transactionSubreport);
+        } else {
+            System.out.println("Transaction Subreport is null");
+        }
+        if (transactionPieSubreport != null) {
+            parameters.put("TRANSACTION_PIE_SUBREPORT", transactionPieSubreport);
+            System.out.println("Transaction Pie Subreport: " + transactionPieSubreport);
+        } else {
+            System.out.println(("Transaction Pie Subreport is Null"));
+        }
+
+        System.out.println("Transactions: " + transactions);
+        System.out.println("Collaterals: " + collaterals);
+
+        // Fill the report
+        System.out.println("Filling report...");
         JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, dataSource);
+        System.out.println("Report filled");
 
-        return format.equalsIgnoreCase("excel") ? exportToExcel(jasperPrint) : JasperExportManager.exportReportToPdf(jasperPrint);
+        // Export based on format
+        System.out.println("Exporting report to " + format);
+        byte[] reportBytes;
+        if ("excel".equalsIgnoreCase(format)) {
+            reportBytes = exportToExcel(jasperPrint);
+        } else {
+            reportBytes = JasperExportManager.exportReportToPdf(jasperPrint);
+        }
+        System.out.println("Report exported, size: " + reportBytes.length + " bytes");
+        System.out.println("Time taken: " + (System.currentTimeMillis() - startTime) + "ms");
+
+        return reportBytes;
     }
 
+    private JasperReport compileSubreport(String jrxmlPath) throws Exception {
+        InputStream subreportStream = this.getClass().getResourceAsStream(jrxmlPath);
+        if (subreportStream == null) {
+            System.out.println("Subreport JRXML not found at: " + jrxmlPath);
+            return null;
+        }
+        try {
+            return JasperCompileManager.compileReport(subreportStream);
+        } catch (Exception e) {
+            System.err.println("Failed to compile subreport at: " + jrxmlPath + " - " + e.getMessage());
+            throw e;
+        }
+    }
 
 
     private byte[] exportToExcel(JasperPrint jasperPrint) throws Exception {
@@ -174,17 +317,6 @@ public class ReportServiceImpl implements ReportService {
         return dto;
     }
 
-    private HpProductDTO mapToDTO(HpProduct entity) {
-        HpProductDTO dto = new HpProductDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setStatus(entity.getStatus());
-        dto.setPrice(entity.getPrice());
-        dto.setCommissionFee(entity.getCommissionFee());
-        return dto;
-    }
-
-
     @Override
     public byte[] generateTransactionReport(String format) throws Exception {
         InputStream reportStream = getClass().getResourceAsStream("/reports/transaction_report.jrxml");
@@ -210,10 +342,4 @@ public class ReportServiceImpl implements ReportService {
 
         return outputStream.toByteArray();
     }
-
-
-
-
-
-
 }

@@ -22,9 +22,9 @@ public interface HpRegistrationService {
 
     HpRegistrationDTO updateHpRegistration(Long id, HpRegistrationDTO dto);
 
-    void softDeleteHpRegistration(Long id);
+    void deleteHpRegistration(Long id);
 
-    void restoreHpRegistration(Long id);
-
-    HpRegistrationDTO save(HpRegistrationDTO hpDto);
+    long getTotalHpCount();
+    long getActiveHpCount();
+    List<Object[]> countHpByMonth();
 }

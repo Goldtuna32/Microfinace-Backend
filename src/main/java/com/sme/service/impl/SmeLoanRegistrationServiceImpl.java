@@ -1,18 +1,20 @@
 package com.sme.service.impl;
 
-import com.sme.dto.LoanRegistrationRequest;
-import com.sme.dto.SmeLoanCollateralDTO;
-import com.sme.dto.SmeLoanRegistrationDTO;
+import com.sme.dto.*;
 import com.sme.entity.*;
 import com.sme.exception.*;
 import com.sme.repository.*;
+import com.sme.service.CIFService;
+import com.sme.service.CurrentAccountService;
 import com.sme.service.RepaymentScheduleService;
 import com.sme.service.SmeLoanRegistrationService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,10 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
     private final SmeLoanRegistrationRepository smeLoanRegistrationRepository;
     private final SmeLoanCollateralRepository smeLoanCollateralRepository;
     private final CollateralRepository collateralRepository;
+
+    private final CurrentAccountService currentAccountService;
+    private final CIFService cifService;
+
 
     @Autowired
     private RepaymentScheduleService repaymentScheduleService;
@@ -225,6 +231,15 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         try {
             loan.setStatus(4);
             SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
+            CurrentAccount currentAccount = loan.getCurrentAccount();
+            if (currentAccount == null) {
+                throw new CurrentAccountNotFoundException("Current account not found for loan ID: " + id);
+            }
+            BigDecimal loanAmount = loan.getLoanAmount(); // Assuming loanAmount is available in SmeLoanRegistration
+            BigDecimal currentBalance = currentAccount.getBalance();
+            currentAccount.setBalance(currentBalance.add(loanAmount));
+            // Save the updated current account.
+            currentAccountRepository.save(currentAccount);
             repaymentScheduleService.generateRepaymentSchedule(id);
             return mapToDTO(updatedLoan);
         } catch (Exception e) {
@@ -245,16 +260,19 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(loanId)
                 .orElseThrow(() -> new LoanNotFoundException(loanId));
 
+        // Manual mapping instead of using ModelMapper
         SmeLoanRegistrationDTO dto = new SmeLoanRegistrationDTO();
+
+        // Map basic fields
         dto.setId(loan.getId());
-        dto.setSerialCode(loan.getSerialCode()); // Added missing field
+        dto.setSerialCode(loan.getSerialCode());
         dto.setLoanAmount(loan.getLoanAmount());
         dto.setInterestRate(loan.getInterestRate());
         dto.setLate_fee_rate(loan.getLate_fee_rate());
         dto.setNinety_day_late_fee_rate(loan.getNinety_day_late_fee_rate());
         dto.setOne_hundred_and_eighty_day_late_fee_rate(loan.getOne_hundred_and_eighty_late_fee_rate());
         dto.setGracePeriod(loan.getGracePeriod());
-        dto.setRepaymentDuration(loan.getRepaymentDuration()); // No need to cast to Long, already Long
+        dto.setRepaymentDuration(loan.getRepaymentDuration());
         dto.setDocumentFee(loan.getDocumentFee());
         dto.setServiceCharges(loan.getServiceCharges());
         dto.setStatus(loan.getStatus());
@@ -265,10 +283,23 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         if (loan.getCurrentAccount() == null) {
             throw new CurrentAccountNotFoundException("Current account is not associated with loan ID: " + loanId);
         }
-        CurrentAccount currentAccount = currentAccountRepository.findById(loan.getCurrentAccount().getId())
-                .orElseThrow(() -> new CurrentAccountNotFoundException(loan.getCurrentAccount().getId()));
-        dto.setCurrentAccountId(currentAccount.getId());
-        dto.setAccountNumber(currentAccount.getAccountNumber());
+
+        // Set current account ID directly
+        dto.setCurrentAccountId(loan.getCurrentAccount().getId());
+        dto.setAccountNumber(loan.getCurrentAccount().getAccountNumber());
+
+        // Get full account details
+        CurrentAccountDTO currentAccountDTO = currentAccountService.getAccountById(loan.getCurrentAccount().getId());
+        dto.setCurrentAccountDetails(currentAccountDTO);
+
+        // Get CIF details if available
+        if (currentAccountDTO.getCifId() != null) {
+            CIFDTO cifDTO = cifService.getCifById(currentAccountDTO.getCifId());
+            dto.setCifDetails(cifDTO);
+
+            // Also set the cif field for frontend compatibility
+            dto.setCif(cifDTO); // Add this setter to your DTO
+        }
 
         // Collateral handling
         List<SmeLoanCollateral> collaterals = smeLoanCollateralRepository.findBySmeLoanId(loanId);
@@ -277,17 +308,24 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
                     if (coll.getCollateral() == null) {
                         throw new CollateralNotFoundException("Collateral is not associated with loan collateral ID: " + coll.getId());
                     }
-                    Collateral collateral = collateralRepository.findById(coll.getCollateral().getId())
-                            .orElseThrow(() -> new CollateralNotFoundException(coll.getCollateral().getId()));
+
+                    // Manual mapping for collateral
                     SmeLoanCollateralDTO collDTO = new SmeLoanCollateralDTO();
-                    collDTO.setCollateralId(collateral.getId());
+                    collDTO.setId(coll.getId());
+                    collDTO.setLoanId(coll.getSmeLoan() != null ? coll.getSmeLoan().getId() : null);
+                    collDTO.setCollateralId(coll.getCollateral().getId());
                     collDTO.setCollateralAmount(coll.getCollateralAmount());
-                    collDTO.setDescription(collateral.getDescription());
+                    collDTO.setDescription(coll.getCollateral().getDescription());
+                    collDTO.setCollateralCode(coll.getCollateral().getCollateralCode()); // Add this if needed
+                    collDTO.setValue(coll.getCollateral().getValue()); // Add this if needed
+                    collDTO.setStatus(coll.getCollateral().getStatus()); // Add this if needed
+
                     return collDTO;
                 })
                 .collect(Collectors.toList());
         dto.setCollaterals(collateralDTOs);
 
+        // Calculate total collateral amount
         BigDecimal totalCollateralAmount = collateralDTOs.stream()
                 .map(SmeLoanCollateralDTO::getCollateralAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -348,4 +386,40 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
             throw new LoanValidationException("Invalid initial status: " + dto.getStatus() + " (must be 3 or 4)");
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SmeLoanRegistrationDTO getLoanDetailsById(Long loanId) {
+        SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("Loan not found with id: " + loanId));
+
+        return mapToDTO(loanId); // Use the complete mapping method
+    }
+
+    @Override
+    public long getTotalLoanCount() {
+        return smeLoanRegistrationRepository.count();
+    }
+
+    @Override
+    public long getPendingLoanCount() {
+        return smeLoanRegistrationRepository.countByStatus(0); // Assuming 0 is pending status
+    }
+
+    @Override
+    public long countByStatus(int status) {
+        return smeLoanRegistrationRepository.countByStatus(status);
+    }
+
+    @Override
+    public List<Object[]> countLoansByMonth() {
+        return smeLoanRegistrationRepository.countLoansGroupedByMonth();
+    }
+
+    @Override
+    public List<SmeLoanRegistration> findRecentLoans(int limit) {
+        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "repaymentStartDate"));
+        return smeLoanRegistrationRepository.findAll(pageable).getContent();
+    }
+
 }

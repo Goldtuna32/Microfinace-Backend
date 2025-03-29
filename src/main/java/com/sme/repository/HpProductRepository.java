@@ -33,4 +33,12 @@ public interface HpProductRepository extends JpaRepository<HpProduct, Long> {
 
     boolean existsByName(String name);
 
+    @Query("SELECT pt.name, COUNT(hp) " +
+            "FROM HpProduct hp JOIN hp.productType pt " +
+            "GROUP BY pt.name")
+    List<Object[]> countProductsGroupedByType();
+
+    @Query("SELECT COUNT(hp) FROM HpProduct hp WHERE hp.dealerRegistration.currentAccount.cif.branch.id = :branchId")
+    int countByBranchId(Long branchId);
+
 }

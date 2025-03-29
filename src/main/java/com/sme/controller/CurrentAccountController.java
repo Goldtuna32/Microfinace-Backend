@@ -1,5 +1,6 @@
 package com.sme.controller;
 
+import com.sme.dto.CIFDTO;
 import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.CurrentAccount;
 import com.sme.repository.CurrentAccountRepository;
@@ -98,5 +99,21 @@ public class CurrentAccountController {
                 ))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
+    }
+
+    @PreAuthorize("hasAuthority('CURRENT_ACCOUNT_READ')")
+    @GetMapping("/activeCurrentAccount")
+    public ResponseEntity<List<CurrentAccountDTO>> getAllCurrentAccounts(
+            @RequestParam(required = false) Long branchId) {
+        List<CurrentAccountDTO> currentAccountDTOS = currentAccountService.getAllCurrentAccountsByBranch(branchId);
+        return ResponseEntity.ok(currentAccountDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('CURRENT_ACCOUNT_READ')")
+    @GetMapping("/freezeCurrentAccount")
+    public ResponseEntity<List<CurrentAccountDTO>> getFreezeCurrentAccounts(
+            @RequestParam(required = false) Long branchId) {
+        List<CurrentAccountDTO> currentAccountDTOS = currentAccountService.getFreeezeCurrentAccountsByBranch(branchId);
+        return ResponseEntity.ok(currentAccountDTOS);
     }
 }

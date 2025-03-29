@@ -114,4 +114,32 @@ public class ReportController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    @GetMapping(value = "/loan/detail/{loanId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generateLoanDetailPdfReport(@PathVariable Long loanId) throws Exception {
+        byte[] reportBytes = reportService.generateLoanDetailReport(loanId, "pdf");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment",
+                String.format("loan_detail_%d.pdf", loanId));
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/loan/detail/{loanId}/excel",
+            produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generateLoanDetailExcelReport(@PathVariable Long loanId) throws Exception {
+        byte[] reportBytes = reportService.generateLoanDetailReport(loanId, "excel");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment",
+                String.format("loan_detail_%d.xlsx", loanId));
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
 }

@@ -30,7 +30,7 @@ public class SmeLoanRegistrationController {
     private SmeLoanRegistrationService loanService;
 
 
-    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_CREATE')")
+    @PreAuthorize("hasRole('LOAN_CREATE')")
     @PostMapping("/register")
     public ResponseEntity<SmeLoanRegistrationDTO> registerLoan(@RequestBody LoanRegistrationRequest request) {
         System.out.println("request = " + request);
@@ -39,13 +39,13 @@ public class SmeLoanRegistrationController {
     }
 
 
-    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_READ')")
-    @GetMapping("/{id}")
-    public ResponseEntity<SmeLoanRegistrationDTO> getLoanById(@PathVariable Long id) {
-        return ResponseEntity.ok(loanService.getLoanById(id));
-    }
+//    @PreAuthorize("hasRole('LOAN_READ')")
+//    @GetMapping("/{id}")
+//    public ResponseEntity<SmeLoanRegistrationDTO> getLoanById(@PathVariable Long id) {
+//        return ResponseEntity.ok(loanService.getLoanById(id));
+//    }
 
-    @PreAuthorize("hasAuthority('SME_LOAN_REGISTRATION_READ')")
+    @PreAuthorize("hasAuthority('LOAN_READ')")
     @GetMapping("/pending")
     public ResponseEntity<Page<SmeLoanRegistrationDTO>> getAllPendingLoans(
             @RequestParam(defaultValue = "0") int page,
@@ -55,7 +55,7 @@ public class SmeLoanRegistrationController {
         return ResponseEntity.ok(smeLoanRegistrationDTOPage);
     }
 
-    @PreAuthorize("hasAuthority('SME_LOAN_REGISTRATION_READ')")
+    @PreAuthorize("hasAuthority('LOAN_READ')")
     @GetMapping("/approved")
     public ResponseEntity<Page<SmeLoanRegistrationDTO>> getAllApprovedLoans(
             @RequestParam(defaultValue = "0") int page,
@@ -65,18 +65,24 @@ public class SmeLoanRegistrationController {
         return ResponseEntity.ok(smeLoanRegistrationDTOPage);
     }
 
-    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_READ')")
+    @PreAuthorize("hasRole('LOAN_READ')")
     @PostMapping("/{id}/approve")
     public ResponseEntity<SmeLoanRegistrationDTO> approveLoan(@PathVariable Long id) {
         SmeLoanRegistrationDTO approvedLoan = loanService.approveLoan(id);
         return ResponseEntity.ok(approvedLoan);
     }
 
-    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_UPDATE')")
+    @PreAuthorize("hasRole('LOAN_UPDATE')")
     @PutMapping("/{id}")
     public ResponseEntity<SmeLoanRegistrationDTO> updateLoan(@PathVariable Long id, @RequestBody SmeLoanRegistrationDTO dto) {
         SmeLoanRegistrationDTO updatedLoan = loanService.updateLoan(id, dto);
         return ResponseEntity.ok(updatedLoan);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SmeLoanRegistrationDTO> getLoanDetails(@PathVariable Long id) {
+        SmeLoanRegistrationDTO loanDetails = loanService.getLoanDetailsById(id);
+        return ResponseEntity.ok(loanDetails);
     }
 
 

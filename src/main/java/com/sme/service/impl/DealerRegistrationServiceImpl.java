@@ -169,4 +169,20 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
                     "Invalid status value: " + dto.getStatus() + " (must be 1 or 2)");
         }
     }
+
+    @Override
+    public List<DealerRegistrationDTO> getAllActiveDealer(Long branchId) {
+        List<DealerRegistration> dealerRegistrations = dealerRepository.findActiveByBranchId(branchId);
+        return dealerRegistrations.stream()
+                .map(dealerRegistration -> modelMapper.map(dealerRegistrations, DealerRegistrationDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DealerRegistrationDTO> getAllInActiveDealer(Long branchId) {
+        List<DealerRegistration> dealerRegistrations = dealerRepository.findInactiveByBranchId(branchId);
+        return dealerRegistrations.stream()
+                .map(dealerRegistration -> modelMapper.map(dealerRegistrations, DealerRegistrationDTO.class))
+                .collect(Collectors.toList());
+    }
 }

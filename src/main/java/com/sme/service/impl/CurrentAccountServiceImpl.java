@@ -268,7 +268,7 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
 
     @Override
     public List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
-        List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
+        List<CurrentAccount> currentAccounts = currentAccountRepository.findFreezeCurrentAccount(branchId);
         return currentAccounts.stream()
                 .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
                 .collect(Collectors.toList());

@@ -30,6 +30,9 @@ public interface CurrentAccountRepository extends JpaRepository<CurrentAccount, 
     @Query("SELECT COUNT(ca) FROM CurrentAccount ca WHERE ca.cif.branch.id = :branchId")
     int countByBranchId(Long branchId);
 
+//    @Query("SELECT ca FROM CurrentAccount ca JOIN ca.dealer d JOIN d.products p WHERE p.id = :productId")
+//    Optional<CurrentAccount> findDealerAccountByProductId(@Param("productId") Long productId);
+
     @Query("SELECT ca FROM CurrentAccount ca WHERE ca.status = 1 " +
             "AND (:branchId IS NULL OR ca.cif.branch.id = :branchId)")
     List<CurrentAccount> findActiveCurrentAccount(
@@ -39,5 +42,11 @@ public interface CurrentAccountRepository extends JpaRepository<CurrentAccount, 
             "AND (:branchId IS NULL OR ca.cif.branch.id = :branchId)")
     List<CurrentAccount> findFreezeCurrentAccount(
             @Param("branchId") Long branchId);
+
+    @Query("SELECT dr.currentAccount FROM DealerRegistration dr " +
+            "JOIN dr.hpProducts hp " +
+            "WHERE hp.id = :productId")
+    Optional<CurrentAccount> findDealerAccountByHpProductId(@Param("productId") Long productId);
+
 }
 

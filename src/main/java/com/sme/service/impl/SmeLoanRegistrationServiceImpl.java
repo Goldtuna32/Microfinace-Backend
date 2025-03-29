@@ -19,9 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +35,8 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
 
     private final CurrentAccountService currentAccountService;
     private final CIFService cifService;
+
+    private final ModelMapper modelMapper;
 
 
     @Autowired
@@ -70,8 +71,7 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         loan.setDocumentFee(loanDTO.getDocumentFee());
         loan.setServiceCharges(loanDTO.getServiceCharges());
         loan.setStatus(loanDTO.getStatus() != null ? loanDTO.getStatus() : 3); // Default to pending (3)
-        loan.setDueDate(loanDTO.getDueDate());
-        loan.setRepaymentStartDate(loanDTO.getRepaymentStartDate());
+        loan.setDueDate(LocalDateTime.now());
 
         String serialCode = generateSerialCode(loanDTO.getCurrentAccountId());
         loan.setSerialCode(serialCode);
@@ -237,6 +237,7 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
 
         try {
             loan.setStatus(4);
+            loan.setRepaymentStartDate(LocalDateTime.now());
             SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
             CurrentAccount currentAccount = loan.getCurrentAccount();
             if (currentAccount == null) {
@@ -429,4 +430,86 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         return smeLoanRegistrationRepository.findAll(pageable).getContent();
     }
 
+    @Override
+    public List<SmeLoanRegistrationDTO> getAllPendingLoans(Long branchId) {
+        List<SmeLoanRegistration> loans = smeLoanRegistrationRepository.findPendingLoans(branchId);
+        return loans.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SmeLoanRegistrationDTO> getAllApprovedLoans(Long branchId) {
+        List<SmeLoanRegistration> loans = smeLoanRegistrationRepository.findApprovedLoans(branchId);
+        return loans.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private SmeLoanRegistrationDTO convertToDTO(SmeLoanRegistration loan) {
+        SmeLoanRegistrationDTO dto = new SmeLoanRegistrationDTO();
+
+        // Map basic fields
+        dto.setId(loan.getId());
+        dto.setSerialCode(loan.getSerialCode());
+        dto.setLoanAmount(loan.getLoanAmount());
+        dto.setInterestRate(loan.getInterestRate());
+        dto.setLate_fee_rate(loan.getLate_fee_rate());
+        dto.setNinety_day_late_fee_rate(loan.getNinety_day_late_fee_rate());
+        dto.setOne_hundred_and_eighty_day_late_fee_rate(loan.getOne_hundred_and_eighty_late_fee_rate());
+        dto.setGracePeriod(loan.getGracePeriod());
+        dto.setRepaymentDuration(loan.getRepaymentDuration());
+        dto.setDocumentFee(loan.getDocumentFee());
+        dto.setServiceCharges(loan.getServiceCharges());
+        dto.setStatus(loan.getStatus());
+        dto.setDueDate(loan.getDueDate());
+        dto.setRepaymentStartDate(loan.getRepaymentStartDate());
+
+        // Handle CurrentAccount
+        if (loan.getCurrentAccount() != null) {
+            dto.setCurrentAccountId(loan.getCurrentAccount().getId());
+            dto.setAccountNumber(loan.getCurrentAccount().getAccountNumber());
+
+            // Map basic CIF info directly (avoid additional queries if possible)
+            if (loan.getCurrentAccount().getCif() != null) {
+                CIFDTO cifDTO = new CIFDTO();
+                cifDTO.setId(loan.getCurrentAccount().getCif().getId());
+                cifDTO.setSerialNumber(loan.getCurrentAccount().getCif().getSerialNumber());
+                // Add other basic CIF fields as needed
+                dto.setCifDetails(cifDTO);
+                dto.setCif(cifDTO);
+            }
+        }
+
+        // Handle Collaterals
+        if (loan.getCollaterals() != null && !loan.getCollaterals().isEmpty()) {
+            List<SmeLoanCollateralDTO> collateralDTOs = loan.getCollaterals().stream()
+                    .map(coll -> {
+                        SmeLoanCollateralDTO collDTO = new SmeLoanCollateralDTO();
+                        collDTO.setId(coll.getId());
+                        collDTO.setLoanId(loan.getId());
+                        if (coll.getCollateral() != null) {
+                            collDTO.setCollateralId(coll.getCollateral().getId());
+                            collDTO.setCollateralAmount(coll.getCollateralAmount());
+                            collDTO.setDescription(coll.getCollateral().getDescription());
+                            // Add other collateral fields as needed
+                        }
+                        return collDTO;
+                    })
+                    .collect(Collectors.toList());
+            dto.setCollaterals(collateralDTOs);
+
+            // Calculate total collateral amount
+            BigDecimal totalCollateralAmount = collateralDTOs.stream()
+                    .map(SmeLoanCollateralDTO::getCollateralAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            dto.setTotalCollateralAmount(totalCollateralAmount);
+        } else {
+            dto.setCollaterals(Collections.emptyList());
+            dto.setTotalCollateralAmount(BigDecimal.ZERO);
+        }
+
+        return dto;
+    }
 }

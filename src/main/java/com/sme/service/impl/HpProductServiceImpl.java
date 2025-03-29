@@ -228,5 +228,21 @@ public class HpProductServiceImpl implements HpProductService {
         return hpProductRepository.countProductsGroupedByType();
     }
 
+    @Override
+    public List<HpProductDTO> getAllActiveProducts(Long branchId) {
+        List<HpProduct> hpProducts = hpProductRepository.findActiveByBranchId(branchId);
+        return hpProducts.stream()
+                .map(hpProduct -> modelMapper.map(hpProducts, HpProductDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<HpProductDTO> getAllInActiveProducts(Long branchId) {
+        List<HpProduct> hpProducts = hpProductRepository.findInactiveByBranchId(branchId);
+        return hpProducts.stream()
+                .map(hpProduct -> modelMapper.map(hpProducts, HpProductDTO.class))
+                .collect(Collectors.toList());
+    }
+
 
 }

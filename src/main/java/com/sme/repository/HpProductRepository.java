@@ -4,6 +4,7 @@ package com.sme.repository;
 import com.sme.entity.DealerRegistration;
 import com.sme.entity.HpProduct;
 import com.sme.entity.ProductType;
+import com.sme.entity.SmeLoanRegistration;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -40,5 +41,15 @@ public interface HpProductRepository extends JpaRepository<HpProduct, Long> {
 
     @Query("SELECT COUNT(hp) FROM HpProduct hp WHERE hp.dealerRegistration.currentAccount.cif.branch.id = :branchId")
     int countByBranchId(Long branchId);
+
+    @Query("SELECT hp FROM HpProduct hp WHERE hp.status = 1 " +
+            "AND (:branchId IS NULL OR hp.dealerRegistration.currentAccount.cif.branch.id = :branchId)")
+    List<HpProduct> findActiveByBranchId(
+            @Param("branchId") Long branchId);
+
+    @Query("SELECT hp FROM HpProduct hp WHERE hp.status = 2 " +
+            "AND (:branchId IS NULL OR hp.dealerRegistration.currentAccount.cif.branch.id = :branchId)")
+    List<HpProduct> findInactiveByBranchId(
+            @Param("branchId") Long branchId);
 
 }

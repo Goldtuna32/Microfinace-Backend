@@ -30,7 +30,7 @@ public class CurrentAccount {
     private BigDecimal minimumBalance;
 
     @StatusConverter
-    @Column(name = "account_status", nullable = false, length = 45)
+    @Column(name = "status", nullable = false, length = 45)
     private Integer status;
 
 

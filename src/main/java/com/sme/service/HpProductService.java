@@ -15,4 +15,7 @@ public interface HpProductService {
     String uploadImage(MultipartFile file);
 
     List<Object[]> countProductsByType();
+
+    List<HpProductDTO> getAllInActiveProducts(Long branchId);
+    List<HpProductDTO> getAllActiveProducts(Long branchId);
 }

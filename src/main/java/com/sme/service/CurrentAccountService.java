@@ -35,7 +35,7 @@ public interface CurrentAccountService {
 
     List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId);
 
-    List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId);
+    List<CurrentAccountDTO> getFreezeCurrentAccountsByBranch(Long branchId);
 
 
 

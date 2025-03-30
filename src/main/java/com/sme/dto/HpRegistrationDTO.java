@@ -18,11 +18,9 @@ public class HpRegistrationDTO {
     private LocalDate endDate;
     private Integer status;
     private Integer gracePeriod;
-    private Long disbursementId;
     private BigDecimal late_fee_rate;
     private BigDecimal ninety_day_late_fee_rate;
     private BigDecimal one_hundred_and_eighty_late_fee_rate;
     private Long currentAccountId;
-    private LocalDateTime disbursementDate;
     private Long hpProductId;
 }

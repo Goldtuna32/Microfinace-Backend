@@ -30,8 +30,6 @@ public class DealerRegistration {
     @Column(name = "status")
     private Integer status;
 
-
-
     @OneToOne
     private Address address;
 
@@ -42,6 +40,6 @@ public class DealerRegistration {
     @JsonManagedReference
     private List<HpProduct> hpProducts;
 
-    private boolean deleted = false; // Soft delete flag
+    private boolean deleted = false;
 
  }

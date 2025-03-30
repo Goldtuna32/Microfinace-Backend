@@ -1,5 +1,6 @@
 package com.sme.service.impl;
 
+import com.sme.dto.CollateralTypeDTO;
 import com.sme.entity.CollateralType;
 import com.sme.exception.*;
 import com.sme.repository.CollateralTypeRepository;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -112,5 +114,33 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
                 collateralType.getStatus() != 2) {
             throw new InvalidStatusException(collateralType.getStatus());
         }
+    }
+
+    @Override
+    public List<CollateralTypeDTO> getActiveCollateralTypesByBranch(Long branchId) {
+        return mapCollateralTypesToDTOs(
+                repository.findActiveCollateralTypesByBranchId(branchId)
+        );
+    }
+
+    @Override
+    public List<CollateralTypeDTO> getInActiveCollateralTypesByBranch(Long branchId) {
+        return mapCollateralTypesToDTOs(
+                repository.findInActiveCollateralTypesByBranchId(branchId)
+        );
+    }
+
+    private List<CollateralTypeDTO> mapCollateralTypesToDTOs(List<CollateralType> types) {
+        return types.stream()
+                .map(this::mapToCollateralTypeDTO)
+                .collect(Collectors.toList());
+    }
+
+    private CollateralTypeDTO mapToCollateralTypeDTO(CollateralType type) {
+        return new CollateralTypeDTO(
+                type.getId(),
+                type.getName(),
+                type.getStatus()
+        );
     }
 }

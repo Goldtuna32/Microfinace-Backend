@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface HpRegistrationRepository extends JpaRepository<HpRegistration, Long> {
@@ -35,4 +36,6 @@ public interface HpRegistrationRepository extends JpaRepository<HpRegistration, 
             "WHERE h.status = 4 " + // Approved status
             "AND (:branchId IS NULL OR h.currentAccount.cif.branch.id = :branchId)")
     List<HpRegistration> findApprovedHP(@Param("branchId") Long branchId);
+
+    Optional<HpRegistration> findTopByOrderByHpNumberDesc();
 }

@@ -1,5 +1,6 @@
 package com.sme.service.impl;
 
+import com.sme.dto.AddressDTO;
 import com.sme.dto.DealerRegistrationDTO;
 import com.sme.entity.Address;
 import com.sme.entity.CurrentAccount;
@@ -174,7 +175,7 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
     public List<DealerRegistrationDTO> getAllActiveDealer(Long branchId) {
         List<DealerRegistration> dealerRegistrations = dealerRepository.findActiveByBranchId(branchId);
         return dealerRegistrations.stream()
-                .map(dealerRegistration -> modelMapper.map(dealerRegistrations, DealerRegistrationDTO.class))
+                .map(this::convertToDealerDTO)
                 .collect(Collectors.toList());
     }
 
@@ -182,7 +183,38 @@ public class DealerRegistrationServiceImpl implements DealerRegistrationService 
     public List<DealerRegistrationDTO> getAllInActiveDealer(Long branchId) {
         List<DealerRegistration> dealerRegistrations = dealerRepository.findInactiveByBranchId(branchId);
         return dealerRegistrations.stream()
-                .map(dealerRegistration -> modelMapper.map(dealerRegistrations, DealerRegistrationDTO.class))
+                .map(this::convertToDealerDTO)
                 .collect(Collectors.toList());
+    }
+
+    private DealerRegistrationDTO convertToDealerDTO(DealerRegistration dealer) {
+        DealerRegistrationDTO dto = new DealerRegistrationDTO();
+        dto.setId(dealer.getId());
+        dto.setCompanyName(dealer.getCompanyName());
+        dto.setPhoneNumber(dealer.getPhoneNumber());
+        dto.setRegistrationDate(dealer.getRegistrationDate());
+        dto.setStatus(dealer.getStatus());
+
+        // Map current account ID if exists
+        if (dealer.getCurrentAccount() != null) {
+            dto.setCurrentAccountId(dealer.getCurrentAccount().getId());
+        }
+
+        // Map address if exists
+        if (dealer.getAddress() != null) {
+            dto.setAddress(convertToAddressDTO(dealer.getAddress()));
+        }
+
+        return dto;
+    }
+
+    private AddressDTO convertToAddressDTO(Address address) {
+        AddressDTO addressDTO = new AddressDTO();
+        addressDTO.setId(address.getId());
+        addressDTO.setStreet(address.getStreet());
+        addressDTO.setDistrict(address.getDistrict());
+        addressDTO.setTownship(address.getTownship());
+        addressDTO.setRegion(address.getRegion());
+        return addressDTO;
     }
 }

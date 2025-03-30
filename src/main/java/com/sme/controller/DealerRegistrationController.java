@@ -64,4 +64,20 @@ public class DealerRegistrationController {
         dealerService.deleteDealer(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PreAuthorize("hasAuthority('DEALER_READ')")
+    @GetMapping("/activeDealers")
+    public ResponseEntity<List<DealerRegistrationDTO>> getAllActiveDealers(
+            @RequestParam(required = false) Long branchId) {
+        List<DealerRegistrationDTO> dealerRegistrationDTOS = dealerService.getAllActiveDealer(branchId);
+        return ResponseEntity.ok(dealerRegistrationDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('DEALER_READ')")
+    @GetMapping("/InactiveDealers")
+    public ResponseEntity<List<DealerRegistrationDTO>> getFreezeCurrentAccounts(
+            @RequestParam(required = false) Long branchId) {
+        List<DealerRegistrationDTO> dealerRegistrationDTOS = dealerService.getAllInActiveDealer(branchId);
+        return ResponseEntity.ok(dealerRegistrationDTOS);
+    }
 }

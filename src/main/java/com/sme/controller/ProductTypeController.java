@@ -1,5 +1,6 @@
 package com.sme.controller;
 
+import com.sme.dto.CollateralTypeDTO;
 import com.sme.dto.ProductTypeDTO;
 import com.sme.repository.ProductTypeRepository;
 import com.sme.service.ProductTypeService;
@@ -78,5 +79,21 @@ public class ProductTypeController {
     public ResponseEntity<ProductTypeDTO> restoreProductType(@PathVariable Long id) {
         ProductTypeDTO restored = productTypeService.restoreProductType(id);
         return ResponseEntity.ok(restored);
+    }
+
+    @PreAuthorize("hasAuthority('PRODUCT_TYPE_READ')")
+    @GetMapping("/activeProductType")
+    public ResponseEntity<List<ProductTypeDTO>> getAllActivePdTy(
+            @RequestParam(required = false) Long branchId) {
+        List<ProductTypeDTO> productTypeDTOS = productTypeService.getActiveProductTypesByBranch(branchId);
+        return ResponseEntity.ok(productTypeDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('PRODUCT_TYPE_READ')")
+        @GetMapping("/InactiveProductType")
+    public ResponseEntity<List<ProductTypeDTO>> getAllInActivePdTy(
+            @RequestParam(required = false) Long branchId) {
+        List<ProductTypeDTO> productTypeDTOS = productTypeService.getInActiveProductTypesByBranch(branchId);
+        return ResponseEntity.ok(productTypeDTOS);
     }
 }

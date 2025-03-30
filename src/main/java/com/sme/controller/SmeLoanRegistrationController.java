@@ -1,6 +1,7 @@
 package com.sme.controller;
 
 import com.sme.dto.CIFDTO;
+import com.sme.dto.CurrentAccountDTO;
 import com.sme.dto.LoanRegistrationRequest;
 import com.sme.dto.SmeLoanRegistrationDTO;
 import com.sme.entity.SmeLoanCollateral;
@@ -83,6 +84,22 @@ public class SmeLoanRegistrationController {
     public ResponseEntity<SmeLoanRegistrationDTO> getLoanDetails(@PathVariable Long id) {
         SmeLoanRegistrationDTO loanDetails = loanService.getLoanDetailsById(id);
         return ResponseEntity.ok(loanDetails);
+    }
+
+    @PreAuthorize("hasAuthority('LOAN_READ')")
+    @GetMapping("/pendingLoans")
+    public ResponseEntity<List<SmeLoanRegistrationDTO>> getAllPendingLoans(
+            @RequestParam(required = false) Long branchId) {
+        List<SmeLoanRegistrationDTO> smeLoanRegistrationDTOS = loanService.getAllPendingLoans(branchId);
+        return ResponseEntity.ok(smeLoanRegistrationDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('LOAN_READ')")
+    @GetMapping("/approvedLoans")
+    public ResponseEntity<List<SmeLoanRegistrationDTO>> getAllApprovedLoans(
+            @RequestParam(required = false) Long branchId) {
+        List<SmeLoanRegistrationDTO> smeLoanRegistrationDTOS = loanService.getAllApprovedLoans(branchId);
+        return ResponseEntity.ok(smeLoanRegistrationDTOS);
     }
 
 

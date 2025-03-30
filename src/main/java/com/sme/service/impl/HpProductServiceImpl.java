@@ -228,5 +228,43 @@ public class HpProductServiceImpl implements HpProductService {
         return hpProductRepository.countProductsGroupedByType();
     }
 
+    @Override
+    public List<HpProductDTO> getAllActiveProducts(Long branchId) {
+        List<HpProduct> hpProducts = hpProductRepository.findActiveByBranchId(branchId);
+        return hpProducts.stream()
+                .map(this::convertToHpProductDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<HpProductDTO> getAllInActiveProducts(Long branchId) {
+        List<HpProduct> hpProducts = hpProductRepository.findInactiveByBranchId(branchId);
+        return hpProducts.stream()
+                .map(this::convertToHpProductDTO)
+                .collect(Collectors.toList());
+    }
+
+    private HpProductDTO convertToHpProductDTO(HpProduct hpProduct) {
+        HpProductDTO dto = new HpProductDTO();
+        dto.setId(hpProduct.getId());
+        dto.setName(hpProduct.getName());
+        dto.setStatus(hpProduct.getStatus());
+        dto.setPrice(hpProduct.getPrice());
+        dto.setHpProductPhoto(hpProduct.getHpProductPhoto());
+        dto.setCommissionFee(hpProduct.getCommissionFee());
+ 
+        // Map product type ID if exists
+        if (hpProduct.getProductType() != null) {
+            dto.setProductTypeId(hpProduct.getProductType().getId());
+        }
+
+        // Map dealer registration ID if exists
+        if (hpProduct.getDealerRegistration() != null) {
+            dto.setDealerRegistrationId(hpProduct.getDealerRegistration().getId());
+        }
+
+        return dto;
+    }
+
 
 }

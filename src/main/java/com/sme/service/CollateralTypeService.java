@@ -1,5 +1,6 @@
 package com.sme.service;
 
+import com.sme.dto.CollateralTypeDTO;
 import com.sme.entity.CollateralType;
 import java.util.List;
 
@@ -10,4 +11,7 @@ public interface CollateralTypeService {
     List<CollateralType> getAllDeletedCollateralTypes();
     CollateralType updateCollateralType(Long id, CollateralType collateralType);
     void softDeleteCollateralType(Long id);
+
+    List<CollateralTypeDTO> getActiveCollateralTypesByBranch(Long branchId);
+    List<CollateralTypeDTO> getInActiveCollateralTypesByBranch(Long branchId);
 }

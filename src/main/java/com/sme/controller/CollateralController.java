@@ -214,11 +214,11 @@ public class CollateralController {
         return ResponseEntity.ok(collateralDTOS);
     }
 
-    @PreAuthorize("hasAuthority('CURRENT_ACCOUNT_READ')")
+    @PreAuthorize("hasAuthority('COLLATERAL_READ')")
     @GetMapping("/inactiveCollateral")
-    public ResponseEntity<List<CollateralDTO>> getFreezeCurrentAccounts(
+    public ResponseEntity<List<CollateralDTO>> getInActiveCollaterals(
             @RequestParam(required = false) Long branchId) {
-        List<CollateralDTO> collateralDTOS = collateralService.getFreeezeCurrentAccountsByBranch(branchId);
+        List<CollateralDTO> collateralDTOS = collateralService.getAllInActiveCollateral(branchId);
         return ResponseEntity.ok(collateralDTOS);
     }
 }

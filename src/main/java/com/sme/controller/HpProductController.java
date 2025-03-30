@@ -92,4 +92,20 @@ public class HpProductController {
         HpProductDTO restored = hpProductService.restoreHpProduct(id);
         return restored != null ? ResponseEntity.ok(restored) : ResponseEntity.notFound().build();
     }
+
+    @PreAuthorize("hasAuthority('HP_PRODUCT_READ')")
+    @GetMapping("/activeHpProducts")
+    public ResponseEntity<List<HpProductDTO>> getAllActiveProducts(
+            @RequestParam(required = false) Long branchId) {
+        List<HpProductDTO> hpProductDTOS = hpProductService.getAllActiveProducts(branchId);
+        return ResponseEntity.ok(hpProductDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('HP_PRODUCT_READ')")
+    @GetMapping("/inActiveHpProducts")
+    public ResponseEntity<List<HpProductDTO>> getAllInactiveProducts(
+            @RequestParam(required = false) Long branchId) {
+        List<HpProductDTO> hpProductDTOS = hpProductService.getAllInActiveProducts(branchId);
+        return ResponseEntity.ok(hpProductDTOS);
+    }
 }

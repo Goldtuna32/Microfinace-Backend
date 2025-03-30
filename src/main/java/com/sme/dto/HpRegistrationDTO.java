@@ -1,8 +1,8 @@
 package com.sme.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -14,11 +14,13 @@ public class HpRegistrationDTO {
     private BigDecimal downPayment;
     private Integer loanTerm;
     private String interestRate;
-    @JsonIgnore
-    private LocalDateTime startDate;
-    @JsonIgnore
-    private LocalDateTime endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private Integer status;
+    private Integer gracePeriod;
+    private BigDecimal late_fee_rate;
+    private BigDecimal ninety_day_late_fee_rate;
+    private BigDecimal one_hundred_and_eighty_late_fee_rate;
     private Long currentAccountId;
     private Long hpProductId;
 }

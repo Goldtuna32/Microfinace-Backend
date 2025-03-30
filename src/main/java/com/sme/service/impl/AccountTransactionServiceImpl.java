@@ -96,6 +96,8 @@ public class AccountTransactionServiceImpl implements AccountTransactionService 
     }
 
 
+
+
     private void validateTransactionDTO(AccountTransactionDTO transactionDTO) {
         if (transactionDTO.getCurrentAccountId() == null) {
             throw new MissingRequiredFieldException("currentAccountId");

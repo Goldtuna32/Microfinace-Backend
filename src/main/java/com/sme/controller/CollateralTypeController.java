@@ -1,5 +1,6 @@
 package com.sme.controller;
 
+import com.sme.dto.CollateralDTO;
 import com.sme.dto.CollateralTypeDTO;
 import com.sme.entity.CollateralType;
 import com.sme.repository.CollateralTypeRepository;
@@ -107,5 +108,21 @@ public class CollateralTypeController {
     public ResponseEntity<Void> softDelete(@PathVariable Long id) {
         service.softDeleteCollateralType(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('COLLATERAL_TYPE_READ')")
+    @GetMapping("/activeCollateralType")
+    public ResponseEntity<List<CollateralTypeDTO>> getAllActiveClTp(
+            @RequestParam(required = false) Long branchId) {
+        List<CollateralTypeDTO> collateralDTOS = service.getActiveCollateralTypesByBranch(branchId);
+        return ResponseEntity.ok(collateralDTOS);
+    }
+
+    @PreAuthorize("hasAuthority('COLLATERAL_TYPE_READ')")
+        @GetMapping("/inactiveCollateralType")
+    public ResponseEntity<List<CollateralTypeDTO>> getAllInActiveClTp(
+            @RequestParam(required = false) Long branchId) {
+        List<CollateralTypeDTO> collateralTypeDTOS = service.getInActiveCollateralTypesByBranch(branchId);
+        return ResponseEntity.ok(collateralTypeDTOS);
     }
 }

@@ -7,6 +7,7 @@ import com.sme.repository.HolidayRepository;
 import com.sme.service.GoogleCalendarService;
 import com.sme.service.HolidayService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class HolidayServiceImpl implements HolidayService {
 
     @Autowired
@@ -96,5 +98,28 @@ public class HolidayServiceImpl implements HolidayService {
     public boolean isHoliday(LocalDate date) {
         List<Holiday> holidays = holidayRepository.findByHolidayDate(java.sql.Date.valueOf(date));
         return !holidays.isEmpty();
+    }
+
+    @Override
+    @Transactional
+    public void checkAndImportYearlyHolidays() {
+        int currentYear = LocalDate.now().getYear();
+
+        // Check if holidays exist for this year
+        Date startDate = java.sql.Date.valueOf(LocalDate.of(currentYear, 1, 1));
+        Date endDate = java.sql.Date.valueOf(LocalDate.of(currentYear, 12, 31));
+
+        long existingHolidayCount = holidayRepository.countByHolidayDateBetween(startDate, endDate);
+
+        if (existingHolidayCount == 0) {
+            try {
+                // Import public holidays and weekends for the new year
+                this.importMyanmarHolidays(currentYear);
+                this.generateWeekendsForYear(currentYear);
+                log.info("Successfully imported holidays for year {}", currentYear);
+            } catch (Exception e) {
+                log.error("Failed to import holidays for year {}: {}", currentYear, e.getMessage());
+            }
+        }
     }
 }

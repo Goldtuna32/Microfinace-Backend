@@ -17,6 +17,11 @@ import java.util.Optional;
 public interface CollateralRepository extends JpaRepository<Collateral, Long> {
     Optional<Collateral> findTopByOrderByIdDesc();
 
+    @Query("SELECT c.collateralCode FROM Collateral c WHERE c.collateralCode LIKE 'COL--%' ORDER BY c.id DESC")
+    List<String> findLatestCollateralCodes(Pageable pageable);
+
+    boolean existsByCollateralCode(String collateralCode);
+
     @Query("SELECT c FROM Collateral c WHERE c.status = :status")
     List<Collateral> findByStatus(@Param("status") Integer status);
 

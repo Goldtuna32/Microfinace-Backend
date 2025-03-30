@@ -113,7 +113,7 @@ public class CurrentAccountController {
     @GetMapping("/freezeCurrentAccount")
     public ResponseEntity<List<CurrentAccountDTO>> getFreezeCurrentAccounts(
             @RequestParam(required = false) Long branchId) {
-        List<CurrentAccountDTO> currentAccountDTOS = currentAccountService.getFreeezeCurrentAccountsByBranch(branchId);
+        List<CurrentAccountDTO> currentAccountDTOS = currentAccountService.getFreezeCurrentAccountsByBranch(branchId);
         return ResponseEntity.ok(currentAccountDTOS);
     }
 }

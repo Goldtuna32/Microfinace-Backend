@@ -8,6 +8,7 @@ import com.sme.repository.CurrentAccountRepository;
 import com.sme.repository.HpRegistrationRepository;
 import com.sme.service.AccountTransactionService;
 import com.sme.service.HpRegistrationService;
+import com.sme.service.HpScheduleService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +33,9 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
 
     @Autowired
     private CurrentAccountRepository currentAccountRepository;  // Add this
+
+    @Autowired
+    private HpScheduleService hpScheduleService;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -54,7 +59,12 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
     }
 
     @Override
+    @Transactional
     public HpRegistrationDTO createHpRegistration(HpRegistrationDTO dto) {
+        // Generate the next HP number
+        String hpNumber = generateNextHpNumber();
+        dto.setHpNumber(hpNumber);
+
         // Set default start date to today if not provided
         if (dto.getStartDate() == null) {
             dto.setStartDate(LocalDate.now());
@@ -72,7 +82,33 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         hpRegistration.setCreatedDate(LocalDateTime.now());
 
         HpRegistration savedHpRegistration = repository.save(hpRegistration);
+
+        // Generate schedule after saving (so we have an ID)
+        hpScheduleService.generateHpRepaymentSchedule(savedHpRegistration.getId());
+
         return modelMapper.map(savedHpRegistration, HpRegistrationDTO.class);
+    }
+
+    private String generateNextHpNumber() {
+        // 1. Find the maximum existing HP number
+        Optional<HpRegistration> lastHpRegistration = repository.findTopByOrderByHpNumberDesc();
+
+        // 2. If no records exist, start with HP-0001
+        if (lastHpRegistration.isEmpty()) {
+            return "HP-0001";
+        }
+
+        // 3. Extract the numeric part from the last HP number
+        String lastHpNumber = lastHpRegistration.get().getHpNumber();
+        String numericPart = lastHpNumber.substring(3); // Remove "HP-" prefix
+
+        try {
+            int lastNumber = Integer.parseInt(numericPart);
+            // 4. Increment and format with leading zeros
+            return String.format("HP-%04d", lastNumber + 1);
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Invalid HP number format in database");
+        }
     }
 
     private LocalDate calculateEndDate(LocalDate startDate, Integer loanTermMonths) {

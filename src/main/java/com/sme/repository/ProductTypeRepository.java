@@ -26,4 +26,20 @@ public interface ProductTypeRepository extends JpaRepository<ProductType, Long> 
     void softDelete(@Param("id") Long id);
 
     boolean existsByName(String name);
+
+    @Query("SELECT DISTINCT pt FROM ProductType pt " +
+            "JOIN pt.hpProducts hp " +
+            "JOIN hp.dealerRegistration dr " +
+            "JOIN dr.currentAccount.cif.branch b " +
+            "WHERE pt.status = 1 AND hp.status = 1 AND dr.status = 1 " +
+            "AND (:branchId IS NULL OR b.id = :branchId)")
+    List<ProductType> findActiveProductTypesByBranchId(@Param("branchId") Long branchId);
+
+    @Query("SELECT DISTINCT pt FROM ProductType pt " +
+            "JOIN pt.hpProducts hp " +
+            "JOIN hp.dealerRegistration dr " +
+            "JOIN dr.currentAccount.cif.branch b " +
+            "WHERE pt.status = 2 AND hp.status = 1 AND dr.status = 1 " +
+            "AND (:branchId IS NULL OR b.id = :branchId)")
+    List<ProductType> findInActiveProductTypesByBranchId(@Param("branchId") Long branchId);
 }

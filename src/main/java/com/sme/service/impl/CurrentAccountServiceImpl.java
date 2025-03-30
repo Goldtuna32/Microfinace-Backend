@@ -38,12 +38,7 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
     @Autowired
     private ModelMapper modelMapper;
 
-    // ✅ Convert Entity → DTO
-    private CurrentAccountDTO convertToDTO(CurrentAccount account) {
-        CurrentAccountDTO dto = modelMapper.map(account, CurrentAccountDTO.class);
-        dto.setCifId(account.getCif().getId());
-        return dto;
-    }
+
 
     // ✅ Convert DTO → Entity
     private CurrentAccount convertToEntity(CurrentAccountDTO dto) {
@@ -262,15 +257,34 @@ public class CurrentAccountServiceImpl implements CurrentAccountService {
     public List<CurrentAccountDTO> getAllCurrentAccountsByBranch(Long branchId) {
         List<CurrentAccount> currentAccounts = currentAccountRepository.findActiveCurrentAccount(branchId);
         return currentAccounts.stream()
-                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<CurrentAccountDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
+    public List<CurrentAccountDTO> getFreezeCurrentAccountsByBranch(Long branchId) {
         List<CurrentAccount> currentAccounts = currentAccountRepository.findFreezeCurrentAccount(branchId);
         return currentAccounts.stream()
-                .map(currentAccount -> modelMapper.map(currentAccounts, CurrentAccountDTO.class))
+                .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private CurrentAccountDTO convertToDTO(CurrentAccount currentAccount) {
+        CurrentAccountDTO dto = new CurrentAccountDTO();
+        dto.setId(currentAccount.getId());
+        dto.setAccountNumber(currentAccount.getAccountNumber());
+        dto.setBalance(currentAccount.getBalance());
+        dto.setStatus(currentAccount.getStatus());
+        dto.setDateCreated(currentAccount.getDateCreated());
+        dto.setHoldAmount(currentAccount.getHoldAmount());
+        dto.setMaximumBalance(currentAccount.getMaximumBalance());
+        dto.setMinimumBalance(currentAccount.getMinimumBalance());
+
+        // Map CIF ID if needed
+        if (currentAccount.getCif() != null) {
+            dto.setCifId(currentAccount.getCif().getId());
+        }
+
+        return dto;
     }
 }

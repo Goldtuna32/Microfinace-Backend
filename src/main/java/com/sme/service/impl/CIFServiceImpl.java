@@ -290,11 +290,6 @@ public class CIFServiceImpl implements CIFService {
             throw new MissingRequiredFieldException("nrc");
         }
 
-        // NRC format validation (example: expecting something like "12/ABC(N)123456")
-        String nrcPattern = "^\\d{1,2}/[A-Za-z]{3}\\([N,R]\\)\\d{6}$";
-        if (!cifDTO.getNrcNumber().matches(nrcPattern)) {
-            throw new InvalidNrcFormatException(cifDTO.getNrcNumber());
-        }
 
         // Branch ID validation
         if (cifDTO.getBranchId() <= 0) {

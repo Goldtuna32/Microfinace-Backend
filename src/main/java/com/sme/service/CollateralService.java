@@ -30,6 +30,6 @@ public interface CollateralService {
 
     List<CollateralDTO> getAllCollateral(Long branchId);
 
-    List<CollateralDTO> getFreeezeCurrentAccountsByBranch(Long branchId);
+    List<CollateralDTO> getAllInActiveCollateral(Long branchId);
 
 }

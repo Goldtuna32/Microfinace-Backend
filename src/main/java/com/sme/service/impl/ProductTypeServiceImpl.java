@@ -133,4 +133,31 @@ public class ProductTypeServiceImpl implements ProductTypeService {
             throw new InvalidStatusException(productTypeDTO.getStatus());
         }
     }
+
+    @Override
+    public List<ProductTypeDTO> getActiveProductTypesByBranch(Long branchId) {
+        return mapProductTypesToDTOs(
+                productTypeRepository.findActiveProductTypesByBranchId(branchId)
+        );
+    }
+
+    @Override
+    public List<ProductTypeDTO> getInActiveProductTypesByBranch(Long branchId) {
+        return mapProductTypesToDTOs(
+                productTypeRepository.findInActiveProductTypesByBranchId(branchId)
+        );
+    }
+
+    private List<ProductTypeDTO> mapProductTypesToDTOs(List<ProductType> types) {
+        return types.stream()
+                .map(this::mapToProductTypeDTO)
+                .collect(Collectors.toList());
+    }
+    private ProductTypeDTO mapToProductTypeDTO(ProductType type) {
+        return new ProductTypeDTO(
+                type.getId(),
+                type.getName(),
+                type.getStatus()
+        );
+    }
 }

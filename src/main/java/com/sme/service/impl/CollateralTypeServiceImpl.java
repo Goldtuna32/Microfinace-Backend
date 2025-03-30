@@ -1,5 +1,6 @@
 package com.sme.service.impl;
 
+import com.sme.dto.CollateralTypeDTO;
 import com.sme.entity.CollateralType;
 import com.sme.exception.*;
 import com.sme.repository.CollateralTypeRepository;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -94,22 +96,6 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
         }
     }
 
-    @Override
-    public void restoreCollateralType(Long id) {
-        try {
-            Optional<CollateralType> optionalCollateralType = repository.findById(id);
-            if (optionalCollateralType.isPresent()) {
-                CollateralType collateralType = optionalCollateralType.get();
-                collateralType.setStatus(1); // Restore to active status
-                repository.save(collateralType);
-            } else {
-                throw new CollateralTypeNotFoundException("Collateral type not found with id: " + id);
-            }
-        } catch (Exception e) {
-            throw new CollateralTypeCreationException("Failed to restore collateral type with id: " + id, e);
-        }
-    }
-
     private void validateCollateralType(CollateralType collateralType) {
         // Required field validation
         if (collateralType.getName() == null || collateralType.getName().trim().isEmpty()) {
@@ -130,5 +116,31 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
         }
     }
 
+    @Override
+    public List<CollateralTypeDTO> getActiveCollateralTypesByBranch(Long branchId) {
+        return mapCollateralTypesToDTOs(
+                repository.findActiveCollateralTypesByBranchId(branchId)
+        );
+    }
 
+    @Override
+    public List<CollateralTypeDTO> getInActiveCollateralTypesByBranch(Long branchId) {
+        return mapCollateralTypesToDTOs(
+                repository.findInActiveCollateralTypesByBranchId(branchId)
+        );
+    }
+
+    private List<CollateralTypeDTO> mapCollateralTypesToDTOs(List<CollateralType> types) {
+        return types.stream()
+                .map(this::mapToCollateralTypeDTO)
+                .collect(Collectors.toList());
+    }
+
+    private CollateralTypeDTO mapToCollateralTypeDTO(CollateralType type) {
+        return new CollateralTypeDTO(
+                type.getId(),
+                type.getName(),
+                type.getStatus()
+        );
+    }
 }

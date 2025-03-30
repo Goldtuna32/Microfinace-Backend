@@ -10,6 +10,7 @@ import com.sme.dto.CurrentAccountDTO;
 import com.sme.entity.CurrentAccount;
 import com.sme.exception.*;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
@@ -70,26 +71,28 @@ public class CollateralServiceImpl implements CollateralService {
     }
 
     private String generateCollateralCode() {
-        String prefix = "COL";
-        String lastCollateralCode = collateralRepository.findTopByOrderByIdDesc()
-                .map(Collateral::getCollateralCode)
-                .orElse(null);
+        // Get the latest 5 collateral codes to check for duplicates
+        Pageable limit = PageRequest.of(0, 5);
+        List<String> latestCodes = collateralRepository.findLatestCollateralCodes(limit);
 
-        if (lastCollateralCode == null) {
-            return prefix + "-0001";
+        if (latestCodes.isEmpty()) {
+            return "COL--0001"; // First collateral
         }
 
-        try {
-            String[] parts = lastCollateralCode.split("-");
-            if (parts.length != 2) {
-                throw new InvalidCollateralCodeException(lastCollateralCode);
-            }
-            int lastNumber = Integer.parseInt(parts[1]);
-            return prefix + "-" + String.format("%04d", lastNumber + 1);
-        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-            throw new InvalidCollateralCodeException(
-                    "Error parsing collateral code: " + lastCollateralCode, e);
-        }
+        // Extract the highest number from existing codes
+        int maxNumber = latestCodes.stream()
+                .map(code -> {
+                    try {
+                        return Integer.parseInt(code.substring(5));
+                    } catch (NumberFormatException e) {
+                        return 0; // In case of format issues
+                    }
+                })
+                .max(Integer::compareTo)
+                .orElse(0);
+
+        // Generate next number with leading zeros
+        return String.format("COL--%04d", maxNumber + 1);
     }
 
     @Transactional
@@ -111,31 +114,34 @@ public class CollateralServiceImpl implements CollateralService {
                     .orElseThrow(() -> new RuntimeException(
                             "CollateralType not found with ID: " + collateralDTO.getCollateralTypeId()));
 
+            // Generate and validate collateral code
+            String collateralCode = generateCollateralCode();
+            if (collateralRepository.existsByCollateralCode(collateralCode)) {
+                throw new InvalidCollateralCodeException("Generated collateral code already exists: " + collateralCode);
+            }
+
             Collateral collateral = new Collateral();
             collateral.setValue(collateralDTO.getValue());
             collateral.setDescription(collateralDTO.getDescription());
             collateral.setStatus(1); // Default active status
             collateral.setDate(new Date());
-            collateral.setCollateralCode(generateCollateralCode());
+            collateral.setCollateralCode(collateralCode);
             collateral.setCif(cif);
             collateral.setCollateralType(type);
 
+            // Handle photo uploads
             if (frontPhoto != null && !frontPhoto.isEmpty()) {
-                try {
-                    String frontPhotoUrl = uploadImage(frontPhoto);
-                    collateral.setF_collateral_photo(frontPhotoUrl);
-                } catch (IOException e) {
-                    throw new ImageUploadException("Failed to upload front collateral photo", e);
-                }
+                String frontPhotoUrl = uploadImage(frontPhoto);
+                collateral.setF_collateral_photo(frontPhotoUrl);
+            } else {
+                throw new MissingRequiredFieldException("Front photo is required");
             }
 
             if (backPhoto != null && !backPhoto.isEmpty()) {
-                try {
-                    String backPhotoUrl = uploadImage(backPhoto);
-                    collateral.setB_collateral_photo(backPhotoUrl);
-                } catch (IOException e) {
-                    throw new ImageUploadException("Failed to upload back collateral photo", e);
-                }
+                String backPhotoUrl = uploadImage(backPhoto);
+                collateral.setB_collateral_photo(backPhotoUrl);
+            } else {
+                throw new MissingRequiredFieldException("Back photo is required");
             }
 
             Collateral savedCollateral = collateralRepository.save(collateral);
@@ -312,16 +318,40 @@ public class CollateralServiceImpl implements CollateralService {
     public List<CollateralDTO> getAllCollateral(Long branchId) {
         List<Collateral> collaterals = collateralRepository.findActiveCollateral(branchId);
         return collaterals.stream()
-                .map(collateral -> modelMapper.map(collaterals, CollateralDTO.class))
+                .map(this::convertToCollateralDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<CollateralDTO> getFreeezeCurrentAccountsByBranch(Long branchId) {
+    public List<CollateralDTO> getAllInActiveCollateral(Long branchId) {
         List<Collateral> collaterals = collateralRepository.findInActiveCollateral(branchId);
         return collaterals.stream()
-                .map(collateral -> modelMapper.map(collaterals, CollateralDTO.class))
+                .map(this::convertToCollateralDTO)
                 .collect(Collectors.toList());
+    }
+
+    private CollateralDTO convertToCollateralDTO(Collateral collateral) {
+        CollateralDTO dto = new CollateralDTO();
+        dto.setId(collateral.getId());
+        dto.setValue(collateral.getValue());
+        dto.setDescription(collateral.getDescription());
+        dto.setF_collateral_photo(collateral.getF_collateral_photo());
+        dto.setB_collateral_photo(collateral.getB_collateral_photo());
+        dto.setStatus(collateral.getStatus());
+        dto.setDate(collateral.getDate());
+        dto.setCollateralCode(collateral.getCollateralCode());
+
+        // Map CIF ID if exists
+        if (collateral.getCif() != null) {
+            dto.setCifId(collateral.getCif().getId());
+        }
+
+        // Map collateral type ID if exists
+        if (collateral.getCollateralType() != null) {
+            dto.setCollateralTypeId(collateral.getCollateralType().getId());
+        }
+
+        return dto;
     }
 
 }

@@ -20,4 +20,6 @@ public interface HolidayRepository extends JpaRepository<Holiday, Long> {
 
      List<Holiday> findByHolidayDate(Date holidayDate);
 
+     long countByHolidayDateBetween(Date startDate, Date endDate);
+
 }

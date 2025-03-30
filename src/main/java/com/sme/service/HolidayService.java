@@ -26,4 +26,6 @@ public interface HolidayService {
 
     boolean isHoliday(LocalDate date);
 
+    void checkAndImportYearlyHolidays();
+
 }

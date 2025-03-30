@@ -1,11 +1,13 @@
 package com.sme.service.impl;
 
-import com.sme.service.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sme.service.AutoPaymentStrategy;
 import com.sme.entity.*;
 import com.sme.repository.*;
+
+import com.sme.service.HolidayService;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -20,7 +22,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set; // Add this import
 import java.util.HashSet; // Add this import
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,25 +32,17 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
     private final RepaymentTransactionRepository repaymentTransactionRepository;
     private final CurrentAccountRepository currentAccountRepository;
     private final AccountTransactionRepository accountTransactionRepository;
-    private final EmailService emailService;
-    private final SmsService smsService;
-    private final NotificationService notificationService;
-
-    private final Map<Long, LocalDate> lastNotified = new ConcurrentHashMap<>();
 
     public LoanAutoPayment(HolidayService holidayService,
-                           RepaymentScheduleRepository repaymentScheduleRepository,
-                           RepaymentTransactionRepository repaymentTransactionRepository,
-                           CurrentAccountRepository currentAccountRepository,
-                           AccountTransactionRepository accountTransactionRepository, EmailService emailService, SmsService smsService, NotificationService notificationService) {
+            RepaymentScheduleRepository repaymentScheduleRepository,
+            RepaymentTransactionRepository repaymentTransactionRepository,
+            CurrentAccountRepository currentAccountRepository,
+            AccountTransactionRepository accountTransactionRepository) {
         this.holidayService = holidayService;
         this.repaymentScheduleRepository = repaymentScheduleRepository;
         this.repaymentTransactionRepository = repaymentTransactionRepository;
         this.currentAccountRepository = currentAccountRepository;
         this.accountTransactionRepository = accountTransactionRepository;
-        this.emailService = emailService;
-        this.smsService = smsService;
-        this.notificationService = notificationService;
     }
 
     @Override
@@ -73,81 +66,11 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         // Process all schedules at once instead of individually
         
         if (!schedulesToProcess.isEmpty()) {
-
-//            for (RepaymentSchedule schedule : schedulesToProcess) {
-//                if (today.isAfter(schedule.getGraceEndDate())) { // Notify only if past grace period
-//                    notifyOverduePayment(schedule);
-//                }
-//            }
             boolean isOverdue = schedulesToProcess.stream()
                     .anyMatch(schedule -> today.isAfter(schedule.getDueDate()));
             processSchedules(schedulesToProcess, isOverdue);
         }
     }
-
-//    private void notifyOverduePayment(RepaymentSchedule schedule) {
-//        LocalDate today = LocalDate.now();
-//        LocalDate lastNotificationDate = lastNotified.get(schedule.getId());
-//
-//        // Skip if already notified today
-//        if (lastNotificationDate != null && lastNotificationDate.equals(today)) {
-//            System.out.println("Skipping notification for schedule #" + schedule.getId() +
-//                    " - Already notified today.");
-//            return;
-//        }
-//
-//        SmeLoanRegistration loan = schedule.getSmeLoan();
-//        CurrentAccount currentAccount = loan.getCurrentAccount();
-//        CIF cif = currentAccount.getCif();
-//
-//        String email = cif.getEmail();
-//        String rawPhoneNumber = cif.getPhoneNumber(); // e.g., "09458345022"
-//        String phoneNumber = "+95" + rawPhoneNumber.replaceFirst("^0", ""); // Becomes "+959458345022"
-//        String customerName = cif.getName();
-//
-//        String subject = "Overdue Payment Notification - Loan #" + loan.getId();
-//        String emailBody = String.format(
-//                "Dear %s,\n\nYour loan payment (Schedule #%d) is overdue as of %s.\n" +
-//                        "Due Date: %s\nAmount: %s\nPlease make the payment at your earliest convenience.\n\n" +
-//                        "Regards,\nSME Loan Team",
-//                customerName, schedule.getId(), LocalDate.now(), schedule.getDueDate(),
-//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A"
-//        );
-//
-//        String smsBody = String.format(
-//                "Dear %s, Your loan payment (Schedule #%d) is overdue. " +
-//                        "Amount: %s. Due: %s. Please pay ASAP.",
-//                customerName, schedule.getId(),
-//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
-//                schedule.getDueDate()
-//        );
-//
-//        String notificationBody = String.format(
-//                "Loan #%d payment overdue. Amount: %s. Due: %s",
-//                loan.getId(),
-//                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
-//                schedule.getDueDate()
-//        );
-//
-//        try {
-//            System.out.println("Attempting to send email to " + email + " with body: " + emailBody);
-//            emailService.sendEmail(email, subject, emailBody);
-//            System.out.println("Attempting to send SMS to " + phoneNumber + " with body: " + smsBody);
-//            smsService.sendSms(phoneNumber, smsBody);
-//            System.out.println("Attempting to save notification for account #" + currentAccount.getId());
-//            notificationService.sendSystemNotification(
-//                    currentAccount.getId(),
-//                    "OVERDUE_PAYMENT",
-//                    notificationBody,
-//                    loan.getId()
-//            );
-//            System.out.println("Notifications sent for schedule #" + schedule.getId());
-//            lastNotified.put(schedule.getId(), today); // Update last notified date
-//        } catch (Exception e) {
-//            System.err.println("Failed to send notifications for schedule #" +
-//                    schedule.getId() + ": " + e.getMessage());
-//        }
-//    }
 
     private void processSchedules(List<RepaymentSchedule> schedules, boolean isOverdue) {
         Map<Long, List<RepaymentSchedule>> schedulesByLoan = schedules.stream()
@@ -195,12 +118,12 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
                     .filter(s -> s.getStatus() != 6)
                     .collect(Collectors.toList());
 
-            processPaymentsInOrder(activeSchedules, account, totalAvailable, isOverdue );
+            processPaymentsInOrder(activeSchedules, account, totalAvailable, isOverdue);
         }
     }
 
     private void processPaymentsInOrder(List<RepaymentSchedule> schedules, CurrentAccount account,
-            BigDecimal totalAvailable, boolean isOverdue ) {
+            BigDecimal totalAvailable, boolean isOverdue) {
         BigDecimal remainingBalance = totalAvailable;
         LocalDate today = LocalDate.now();
 
@@ -278,20 +201,23 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         }
 
         // Process schedules in order
-        // In processPaymentsInOrder method, update the method call:
         for (RepaymentSchedule schedule : schedules) {
-        if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
-            break;
-        
-        // Pass schedules list to the method
-        processIndividualSchedule(schedule, account, isOverdue, schedules , remainingBalance);
-        remainingBalance = account.getBalance();
-    }
+            if (remainingBalance.compareTo(BigDecimal.ZERO) <= 0)
+                break;
+
+            // Process individual schedule (handles late fees, IOD, interest, and principal)
+            processIndividualSchedule(schedule, account, isOverdue);
+            remainingBalance = account.getBalance(); // Update remainingBalance after processing
         }
-        
-        // Update the method signature and implementation:
-        private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, 
-        boolean isOverdue, List<RepaymentSchedule> schedules , BigDecimal remainingBalance) {
+
+        // Update final account balance
+        account.setBalance(remainingBalance);
+        account.setHoldAmount(BigDecimal.ZERO);
+        currentAccountRepository.save(account);
+    }
+
+    
+    private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, boolean isOverdue) {
         System.out.println("\n=== Processing Schedule ID: " + schedule.getId() + " ===");
         System.out.println("Initial account balance: " + account.getBalance());
 
@@ -299,19 +225,6 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         LocalDate startDate = schedule.getLateFeeStartDate();
         LocalDate dueDate = schedule.getDueDate();
         LocalDate graceEndDate = schedule.getGraceEndDate();
-
-        // Declare required payment variables
-        BigDecimal requiredLateFee = calculateLateFee(schedule);
-        BigDecimal requiredInterest = schedule.getInterestAmount();
-        BigDecimal requiredPrincipal = schedule.getPrincipalAmount();
-
-        // Declare payment tracking variables
-        BigDecimal paidLateFee = BigDecimal.ZERO;
-        BigDecimal paidIOD = BigDecimal.ZERO;
-        BigDecimal paidInterest = BigDecimal.ZERO;
-        BigDecimal paidPrincipal = BigDecimal.ZERO;
-
-        System.out.println("IS OVERDUE CHECK: " + isOverdue);
 
         // Calculate late days using lastPaymentDate if available
         long lateDays = ChronoUnit.DAYS.between(startDate, today);
@@ -342,63 +255,33 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
             return; // Changed from continue to return
         }
 
-        // Remove duplicate account declaration and use the totalAvailable passed
-        BigDecimal balance = remainingBalance;
+        // Remove duplicate account declaration and use the one passed as parameter
+        BigDecimal balance = account.getBalance();
 
-        // Calculate total late fees first
-        BigDecimal totalLateFees = BigDecimal.ZERO;
-        if (isOverdue) {
-            for (RepaymentSchedule lateSchedule : schedules) {
-                if (lateSchedule.getStatus() != 6) {
-                    totalLateFees = totalLateFees.add(calculateLateFee(lateSchedule));
+        // Declare required payment variables
+        BigDecimal requiredLateFee = calculateLateFee(schedule);
+        BigDecimal requiredInterest = schedule.getInterestAmount();
+        BigDecimal requiredPrincipal = schedule.getPrincipalAmount();
+
+        // Declare payment tracking variables
+        BigDecimal paidLateFee = BigDecimal.ZERO;
+        BigDecimal paidIOD = BigDecimal.ZERO;
+        BigDecimal paidInterest = BigDecimal.ZERO;
+        BigDecimal paidPrincipal = BigDecimal.ZERO;
+
+        System.out.println("IS OVERDUE CHECK: " + isOverdue);
+
+                // 1. Late Fee
+                if (isOverdue && requiredLateFee.compareTo(BigDecimal.ZERO) > 0 && balance.compareTo(requiredLateFee) >= 0) {
+                    paidLateFee = requiredLateFee;
+                    balance = balance.subtract(paidLateFee);
+                    // Set last payment date when late fee is paid
+                    schedule.setLastPaymentDate(today);
+                    repaymentScheduleRepository.save(schedule);
+                    System.out.println("Late fee payment: " + paidLateFee);
                 }
-            }
-        }
 
-        // If not enough balance for total late fees, hold money
-        if (isOverdue && totalLateFees.compareTo(BigDecimal.ZERO) > 0) {
-            if (balance.compareTo(totalLateFees) < 0) {
-                // Get existing hold amount and add new hold
-                BigDecimal existingHold = account.getHoldAmount() != null ? account.getHoldAmount() : BigDecimal.ZERO;
-                BigDecimal newTotalHold = existingHold.add(account.getBalance());
-                account.setHoldAmount(newTotalHold);
-                account.setBalance(BigDecimal.ZERO);
-                currentAccountRepository.save(account);
-                return;
-            }
-
-            // Process all late fees first
-            for (RepaymentSchedule lateSchedule : schedules) {
-                if (lateSchedule.getStatus() != 6) {
-                    BigDecimal currentLateFee = calculateLateFee(lateSchedule);
-                    if (currentLateFee.compareTo(BigDecimal.ZERO) > 0) {
-                        balance = balance.subtract(currentLateFee);
-                        lateSchedule.setLastPaymentDate(today);
-                        repaymentScheduleRepository.save(lateSchedule);
-                        
-                        // Create transaction for late fee
-                        RepaymentTransaction lateFeeTransaction = new RepaymentTransaction();
-                        lateFeeTransaction.setPaymentDate(Timestamp.valueOf(LocalDateTime.now()));
-                        lateFeeTransaction.setPaidLateFee(currentLateFee);
-                        lateFeeTransaction.setPaidIOD(BigDecimal.ZERO);
-                        lateFeeTransaction.setPaidInterest(BigDecimal.ZERO);
-                        lateFeeTransaction.setPaidPrincipal(BigDecimal.ZERO);
-                        lateFeeTransaction.setRemainingPrincipal(lateSchedule.getRemainingPrincipal());
-                        lateFeeTransaction.setCurrentAccount(account);
-                        lateFeeTransaction.setRepaymentSchedule(lateSchedule);
-                        lateFeeTransaction.setStatus(1);
-                        repaymentTransactionRepository.save(lateFeeTransaction);
-                    }
-                }
-            }
-            // Clear hold amount since we've used it for late fee payment
-            account.setHoldAmount(BigDecimal.ZERO);
-            account.setBalance(balance);
-            currentAccountRepository.save(account);
-             // here to set hold amount to zero
-        }
-
-        // Continue with regular interest and principal processing for current schedule
+        // 2. IOD (Interest Over Due)
         BigDecimal iod = schedule.getInterestOverDue();
         if (iod.compareTo(BigDecimal.ZERO) > 0 && balance.compareTo(BigDecimal.ZERO) > 0) {
             if (balance.compareTo(iod) >= 0) {
@@ -440,32 +323,9 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         // 4. Principal
         if (balance.compareTo(BigDecimal.ZERO) > 0) {
             if (balance.compareTo(requiredPrincipal) >= 0) {
-                // Full payment
                 paidPrincipal = requiredPrincipal;
                 balance = balance.subtract(paidPrincipal);
-                schedule.setPrincipalAmount(BigDecimal.ZERO);
-                schedule.setRemainingPrincipal(BigDecimal.ZERO);
-            } else {
-                // Partial payment - use all remaining balance
-                paidPrincipal = balance;
-                BigDecimal remainingAmount = requiredPrincipal.subtract(paidPrincipal);
-                schedule.setPrincipalAmount(remainingAmount);
-                schedule.setRemainingPrincipal(remainingAmount);
-                
-                // Update all future schedules with the new remaining amount
-                List<RepaymentSchedule> futureSchedules = schedules.stream()
-                    .filter(s -> s.getId() > schedule.getId() && s.getStatus() != 6)
-                    .collect(Collectors.toList());
-                
-                for (RepaymentSchedule futureSchedule : futureSchedules) {
-                    futureSchedule.setPrincipalAmount(remainingAmount);
-                    futureSchedule.setRemainingPrincipal(remainingAmount);
-                    repaymentScheduleRepository.save(futureSchedule);
-                }
-                
-                balance = BigDecimal.ZERO;  // Use all remaining balance for partial payment
             }
-            repaymentScheduleRepository.save(schedule);
         }
 
         // Update account balance and save immediately

@@ -22,10 +22,13 @@ public interface HolidayService {
 
     void generateWeekendsForYear(int year);
 
-    List<Holiday> getHolidaysByBranch(Long branchId);
-
     boolean isHoliday(LocalDate date);
 
     void checkAndImportYearlyHolidays();
+
+    List<Holiday> getAllHolidays();
+
+    List<Holiday> getHolidaysByYear(int year);
+
 
 }

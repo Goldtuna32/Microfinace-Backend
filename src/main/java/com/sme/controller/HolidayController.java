@@ -15,7 +15,6 @@ public class HolidayController {
     @Autowired
     private HolidayService holidayService;
 
-    // ✅ Fetch Myanmar public holidays and store them
     @PostMapping("/import")
     public ResponseEntity<String> importMyanmarHolidays(@RequestParam int year) {
         try {
@@ -32,9 +31,19 @@ public class HolidayController {
         return ResponseEntity.ok("Weekend holidays for year " + year + " added successfully!");
     }
 
-    // ✅ Get holidays by branch
-    @GetMapping("/branch/{branchId}")
-    public ResponseEntity<List<Holiday>> getHolidaysByBranch(@PathVariable Long branchId) {
-        return ResponseEntity.ok(holidayService.getHolidaysByBranch(branchId));
+    @GetMapping
+    public ResponseEntity<List<Holiday>> getAllHolidays() {
+        return ResponseEntity.ok(holidayService.getAllHolidays());
+    }
+
+    @GetMapping("/year/{year}")
+    public ResponseEntity<List<Holiday>> getHolidaysByYear(@PathVariable int year) {
+        return ResponseEntity.ok(holidayService.getHolidaysByYear(year));
+    }
+
+    @PostMapping("/import-current-year")
+    public ResponseEntity<String> importCurrentYearHolidays() {
+        holidayService.checkAndImportYearlyHolidays();
+        return ResponseEntity.ok("Holiday import process triggered for current year");
     }
 }

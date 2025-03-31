@@ -30,7 +30,7 @@ public class CIFController {
     @Autowired
     private CIFRepository cifRepository;
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/active")
     public ResponseEntity<Page<CIFDTO>> getAllCIFs(
             @RequestParam(defaultValue = "0") int page,
@@ -41,14 +41,14 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/activeCIFS")
     public ResponseEntity<List<CIFDTO>> getAllActiveCIFS() {
         List<CIFDTO> cifList = cifService.getAllCifs();
         return ResponseEntity.ok(cifList);
     }
 
-    @PreAuthorize("hasAuthority('CIF_CREATE')")
+    @PreAuthorize("hasAuthority('CIF_CREATE') or hasRole('SUPER_ADMIN')")
     @GetMapping("/check-duplicate")
     public ResponseEntity<Map<String, Boolean>> checkDuplicate(
             @RequestParam(required = false) String name,
@@ -64,7 +64,7 @@ public class CIFController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/deleted")
     public ResponseEntity<Page<CIFDTO>> getDeletedCIFs(
             @RequestParam(defaultValue = "0") int page,
@@ -75,7 +75,7 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getCIFById(@PathVariable Long id) {
         Optional<CIFDTO> cifDTO = cifService.getCIFById(id);
@@ -87,7 +87,7 @@ public class CIFController {
         }
     }
 
-    @PreAuthorize("hasAuthority('CIF_CREATE')")
+    @PreAuthorize("hasAuthority('CIF_CREATE') or hasRole('SUPER_ADMIN')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CIFDTO> createCIF(
             @RequestParam("name") String name,
@@ -121,7 +121,7 @@ public class CIFController {
         return ResponseEntity.ok(cifService.createCIF(cifDTO, frontNrc, backNrc));
     }
 
-    @PreAuthorize("hasAuthority('CIF_UPDATE')")
+    @PreAuthorize("hasAuthority('CIF_UPDATE') or hasRole('SUPER_ADMIN')")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<CIFDTO> updateCIF(
             @PathVariable Long id,
@@ -157,7 +157,7 @@ public class CIFController {
         return ResponseEntity.ok(cifService.updateCIF(id, cifDTO, frontNrc, backNrc));
     }
 
-    @PreAuthorize("hasAuthority('CIF_DELETE')")
+    @PreAuthorize("hasAuthority('CIF_DELETE') or hasRole('SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> softDeleteCIF(@PathVariable Long id) {
         return cifService.softDeleteCIF(id)
@@ -165,7 +165,7 @@ public class CIFController {
                 : ResponseEntity.notFound().build();
     }
 
-    @PreAuthorize("hasAuthority('CIF_DELETE')")
+    @PreAuthorize("hasAuthority('CIF_DELETE') or hasRole('SUPER_ADMIN')")
     @PutMapping("/{id}/restore")
     public ResponseEntity<Void> restoreCIF(@PathVariable Long id) {
         return cifService.restoreCIF(id)
@@ -173,13 +173,13 @@ public class CIFController {
                 : ResponseEntity.notFound().build();
     }
 
-    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_READ')")
+    @PreAuthorize("hasRole('SME_LOAN_REGISTRATION_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/current-account/{currentAccountId}")
     public ResponseEntity<CIFDTO> getCifByCurrentAccountId(@PathVariable Long currentAccountId) {
         return ResponseEntity.ok(cifService.findCifByCurrentAccountId(currentAccountId));
     }
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/activeCIFList")
     public ResponseEntity<List<CIFDTO>> getAllCIFs(
             @RequestParam(required = false) Long branchId,
@@ -188,7 +188,7 @@ public class CIFController {
         return ResponseEntity.ok(cifPage);
     }
 
-    @PreAuthorize("hasAuthority('CIF_READ')")
+    @PreAuthorize("hasAuthority('CIF_READ') or hasRole('SUPER_ADMIN')")
     @GetMapping("/deletedCIFList")
     public ResponseEntity<List<CIFDTO>> getDeletedCIFs(
             @RequestParam(required = false) Long branchId,

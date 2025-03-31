@@ -6,6 +6,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -33,15 +34,35 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Value("${spring.security.user.email}")
+    private String superAdminUsername;
+
+    @Value("${spring.security.user.password}")
+    private String superAdminPassword;
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest loginRequest, HttpServletResponse response) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
-            );
+            Authentication authentication;
+
+            // Check for super admin credentials
+            if (loginRequest.getEmail().equals(superAdminUsername) &&
+                    loginRequest.getPassword().equals(superAdminPassword)) {
+                // Super admin login
+                authentication = new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword(),
+                        List.of(() -> "ROLE_SUPER_ADMIN") // Set super admin role
+                );
+            } else {
+                // Normal user login
+                authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                loginRequest.getEmail(),
+                                loginRequest.getPassword()
+                        )
+                );
+            }
 
             // Extract roles from authorities
             List<String> roles = authentication.getAuthorities().stream()

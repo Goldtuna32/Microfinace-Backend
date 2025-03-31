@@ -43,7 +43,4 @@ public class Branch {
     @OneToOne
     private Address address;
 
-    @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Holiday> holidays;
-
 }

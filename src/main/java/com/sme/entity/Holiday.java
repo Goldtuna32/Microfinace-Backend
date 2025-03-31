@@ -21,8 +21,5 @@ public class Holiday {
     @Column(nullable = false, length = 1000)
     private String description;
 
-    @ManyToOne
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
 
 }

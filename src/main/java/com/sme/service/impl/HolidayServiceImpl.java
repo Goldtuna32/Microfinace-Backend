@@ -7,6 +7,7 @@ import com.sme.repository.HolidayRepository;
 import com.sme.service.GoogleCalendarService;
 import com.sme.service.HolidayService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class HolidayServiceImpl implements HolidayService {
 
     @Autowired
@@ -44,17 +46,14 @@ public class HolidayServiceImpl implements HolidayService {
             Date holidayDate = dateFormat.parse(holidayData.get("date"));
             String holidayName = holidayData.get("name");
 
-            List<Branch> branches = branchRepository.findAll();
-            for (Branch branch : branches) {
-
-                boolean exists = holidayRepository.existsByBranchAndHolidayDate(branch, holidayDate);
-                if (!exists) {
-                    Holiday holiday = new Holiday();
-                    holiday.setHolidayDate(holidayDate);
-                    holiday.setDescription(holidayName);
-                    holiday.setBranch(branch);
-                    holidayRepository.save(holiday);
-                }
+            // Check if holiday already exists (no branch check needed now)
+            boolean exists = holidayRepository.existsByHolidayDate(holidayDate);
+            if (!exists) {
+                Holiday holiday = new Holiday();
+                holiday.setHolidayDate(holidayDate);
+                holiday.setDescription(holidayName);
+                holidayRepository.save(holiday);
+                log.debug("Added holiday: {} on {}", holidayName, holidayDate);
             }
         }
     }
@@ -62,9 +61,7 @@ public class HolidayServiceImpl implements HolidayService {
     @Transactional
     @Override
     public void generateWeekendsForYear(int year) {
-        List<Branch> branches = branchRepository.findAll(); // ✅ Get all branches
         List<Holiday> holidays = new ArrayList<>();
-
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
 
@@ -72,29 +69,69 @@ public class HolidayServiceImpl implements HolidayService {
             DayOfWeek dayOfWeek = startDate.getDayOfWeek();
 
             if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
-                for (Branch branch : branches) {
+                Date weekendDate = java.sql.Date.valueOf(startDate);
+
+                // Check if weekend already marked as holiday
+                if (!holidayRepository.existsByHolidayDate(weekendDate)) {
                     Holiday holiday = new Holiday();
-                    holiday.setHolidayDate(java.sql.Date.valueOf(startDate));
+                    holiday.setHolidayDate(weekendDate);
                     holiday.setDescription(dayOfWeek.name() + " (Weekend)");
-                    holiday.setBranch(branch);
                     holidays.add(holiday);
                 }
             }
             startDate = startDate.plusDays(1);
         }
 
-        holidayRepository.saveAll(holidays);
+        if (!holidays.isEmpty()) {
+            holidayRepository.saveAll(holidays);
+            log.info("Added {} weekend holidays for year {}", holidays.size(), year);
+        }
     }
 
     @Override
-    @Transactional
-    public List<Holiday> getHolidaysByBranch(Long branchId) {
-        return holidayRepository.findByBranchId(branchId);
+    public List<Holiday> getAllHolidays() {
+        return holidayRepository.findAll();
     }
 
     @Override
     public boolean isHoliday(LocalDate date) {
-        List<Holiday> holidays = holidayRepository.findByHolidayDate(java.sql.Date.valueOf(date));
-        return !holidays.isEmpty();
+        return holidayRepository.existsByHolidayDate(java.sql.Date.valueOf(date));
+    }
+
+
+    @Override
+    @Transactional
+    public void checkAndImportYearlyHolidays() {
+        int currentYear = LocalDate.now().getYear();
+        log.info("🔍 Checking holidays for year {}", currentYear);
+
+        Date startDate = java.sql.Date.valueOf(LocalDate.of(currentYear, 1, 1));
+        Date endDate = java.sql.Date.valueOf(LocalDate.of(currentYear, 12, 31));
+
+        long existingCount = holidayRepository.countByHolidayDateBetween(startDate, endDate);
+        log.info("📊 Found {} existing holidays for {}", existingCount, currentYear);
+
+        if (existingCount == 0) {
+            try {
+                log.info("🔄 Importing holidays...");
+                this.importMyanmarHolidays(currentYear);
+                this.generateWeekendsForYear(currentYear);
+                long newCount = holidayRepository.countByHolidayDateBetween(startDate, endDate);
+                log.info("🎉 Successfully imported {} holidays", newCount);
+            } catch (Exception e) {
+                log.error("💥 Import failed: {}", e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public List<Holiday> getHolidaysByYear(int year) {
+        // Option 1: Using the repository method we defined
+        LocalDate startDate = LocalDate.of(year, 1, 1);
+        LocalDate endDate = LocalDate.of(year, 12, 31);
+        return holidayRepository.findByHolidayDateBetween(
+                java.sql.Date.valueOf(startDate),
+                java.sql.Date.valueOf(endDate)
+        );
     }
 }

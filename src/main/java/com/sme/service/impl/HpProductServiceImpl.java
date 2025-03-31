@@ -252,7 +252,7 @@ public class HpProductServiceImpl implements HpProductService {
         dto.setPrice(hpProduct.getPrice());
         dto.setHpProductPhoto(hpProduct.getHpProductPhoto());
         dto.setCommissionFee(hpProduct.getCommissionFee());
- 
+
         // Map product type ID if exists
         if (hpProduct.getProductType() != null) {
             dto.setProductTypeId(hpProduct.getProductType().getId());

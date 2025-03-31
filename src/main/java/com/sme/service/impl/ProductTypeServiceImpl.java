@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -133,31 +134,31 @@ public class ProductTypeServiceImpl implements ProductTypeService {
             throw new InvalidStatusException(productTypeDTO.getStatus());
         }
     }
-
     @Override
     public List<ProductTypeDTO> getActiveProductTypesByBranch(Long branchId) {
-        return mapProductTypesToDTOs(
-                productTypeRepository.findActiveProductTypesByBranchId(branchId)
-        );
+        List<ProductType> productTypes = productTypeRepository.findActiveProductTypesByBranchId(branchId);
+        return convertProductTypesToDTOs(productTypes);
     }
 
     @Override
     public List<ProductTypeDTO> getInActiveProductTypesByBranch(Long branchId) {
-        return mapProductTypesToDTOs(
-                productTypeRepository.findInActiveProductTypesByBranchId(branchId)
-        );
+        List<ProductType> productTypes = productTypeRepository.findInActiveProductTypesByBranchId(branchId);
+        return convertProductTypesToDTOs(productTypes);
     }
 
-    private List<ProductTypeDTO> mapProductTypesToDTOs(List<ProductType> types) {
-        return types.stream()
-                .map(this::mapToProductTypeDTO)
-                .collect(Collectors.toList());
+    private List<ProductTypeDTO> convertProductTypesToDTOs(List<ProductType> productTypes) {
+        List<ProductTypeDTO> dtos = new ArrayList<>();
+        for (ProductType productType : productTypes) {
+            dtos.add(convertToProductTypeDTO(productType));
+        }
+        return dtos;
     }
-    private ProductTypeDTO mapToProductTypeDTO(ProductType type) {
-        return new ProductTypeDTO(
-                type.getId(),
-                type.getName(),
-                type.getStatus()
-        );
+
+    private ProductTypeDTO convertToProductTypeDTO(ProductType productType) {
+        ProductTypeDTO dto = new ProductTypeDTO();
+        dto.setId(productType.getId());
+        dto.setName(productType.getName());
+        dto.setStatus(productType.getStatus());
+        return dto;
     }
 }

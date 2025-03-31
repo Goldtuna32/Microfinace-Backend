@@ -191,6 +191,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
                 // Update account balance
                 remainingBalance = remainingBalance.subtract(totalLateFee);
                 account.setBalance(remainingBalance);
+                account.setHoldAmount(BigDecimal.ZERO);
             } else {
                 // Not enough for full payment - hold all available money
                 account.setHoldAmount(remainingBalance);

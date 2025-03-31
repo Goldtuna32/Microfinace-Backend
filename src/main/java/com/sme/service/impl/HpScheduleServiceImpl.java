@@ -6,6 +6,7 @@ import com.sme.entity.HpRegistration;
 import com.sme.entity.HpSchedule;
 import com.sme.repository.HpRegistrationRepository;
 import com.sme.repository.HpScheduleRepository;
+import com.sme.service.HolidayService;
 import com.sme.service.HpProductService;
 import com.sme.service.HpScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,9 @@ public class HpScheduleServiceImpl implements HpScheduleService {
 
     @Autowired
     private ModelMapper modelMapper;
+    @Autowired
+    private HolidayService holidayService;
+    
 
     @Override
     public List<HpScheduleDTO> generateHpRepaymentSchedule(Long hpRegistrationId) {
@@ -96,19 +100,15 @@ public class HpScheduleServiceImpl implements HpScheduleService {
         BigDecimal remainingBalance = loanAmount;
         LocalDate currentDate = hpRegistration.getStartDate().toLocalDate();
 
-        // // Add initial row
-        // HpSchedule initialSchedule = new HpSchedule();
-        // initialSchedule.setDueDate(currentDate);
-        // initialSchedule.setGraceEndDate(currentDate.plusDays(hpRegistration.getGracePeriod()));
-        // initialSchedule.setPrincipalAmount(loanAmount.longValue());
-        // initialSchedule.setInterestAmount(0L);
-        // initialSchedule.setInstallmentNo("0");
-        // initialSchedule.setHpRegistrationId(hpRegistrationId);
-        // schedules.add(initialSchedule);
-
         // Generate schedule
         for (int i = 1; i <= loanTerm; i++) {
             LocalDate dueDate = currentDate.plusMonths(i);
+            
+            // Calculate grace end date and adjust for holidays
+            LocalDate graceEndDate = dueDate.plusDays(hpRegistration.getGracePeriod());
+            while (holidayService.isHoliday(graceEndDate)) {
+                graceEndDate = graceEndDate.plusDays(1);
+            }
             
             // Calculate interest using BMF
             BigDecimal interestAmount = remainingBalance.multiply(bmf)
@@ -127,7 +127,7 @@ public class HpScheduleServiceImpl implements HpScheduleService {
 
             HpSchedule schedule = new HpSchedule();
             schedule.setDueDate(dueDate);
-            schedule.setGraceEndDate(dueDate.plusDays(hpRegistration.getGracePeriod()));
+            schedule.setGraceEndDate(graceEndDate);  // Use the holiday-adjusted grace end date
             schedule.setInterestAmount(interestAmount.longValue());
             schedule.setPrincipalAmount(principalForThisPeriod.longValue());
             schedule.setLateDay(0L);

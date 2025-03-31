@@ -5,6 +5,7 @@ import com.sme.entity.RepaymentSchedule;
 import com.sme.entity.SmeLoanRegistration;
 import com.sme.repository.RepaymentScheduleRepository;
 import com.sme.repository.SmeLoanRegistrationRepository;
+import com.sme.service.HolidayService;
 import com.sme.service.RepaymentScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ public class RepaymentScheduleServiceImpl implements RepaymentScheduleService {
 
     @Autowired
     private SmeLoanRegistrationRepository loanRepository;
+
+    @Autowired
+    private HolidayService holidayService;
 
     @Transactional
     @Override
@@ -51,35 +55,38 @@ public class RepaymentScheduleServiceImpl implements RepaymentScheduleService {
 
         for (int i = 1; i <= repaymentPeriod; i++) {
             LocalDate dueDate = startDate.plusMonths(i);
-            // Calculate days based on the previous month (where interest actually accrued)
             LocalDate interestPeriodDate = dueDate.minusMonths(1);
             int daysInMonth = interestPeriodDate.lengthOfMonth();
 
-            // Interest is calculated based on the REMAINING PRINCIPAL
+            // Calculate interest
             BigDecimal interestAmount = remainingBalance.multiply(dailyInterestRate)
                     .multiply(BigDecimal.valueOf(daysInMonth))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
 
-            // Principal should remain the full loan amount but we track actual payments
-            BigDecimal principalAmount = loanAmount; // Always the full loan amount
-            BigDecimal principalPaid = BigDecimal.ZERO; // Principal paid initially zero
+            BigDecimal principalAmount = loanAmount;
+            BigDecimal principalPaid = BigDecimal.ZERO;
 
-            // Check if it's the last term (pay full remaining principal)
             if (i == repaymentPeriod) {
-                principalPaid = remainingBalance; // Pay all remaining balance in the last term
-                remainingBalance = BigDecimal.ZERO; // Fully paid
+                principalPaid = remainingBalance;
+                remainingBalance = BigDecimal.ZERO;
             }
 
-            // Create repayment schedule entry
+            // Calculate grace end date and adjust for holidays
+            LocalDate graceEndDate = dueDate.plusDays(gracePeriod);
+            while (holidayService.isHoliday(graceEndDate)) {
+                graceEndDate = graceEndDate.plusDays(1);
+            }
+
+            // Create schedule
             RepaymentSchedule schedule = new RepaymentSchedule();
             schedule.setSmeLoan(loan);
             schedule.setDueDate(dueDate);
-            schedule.setGraceEndDate(dueDate.plusDays(gracePeriod));
+            schedule.setGraceEndDate(graceEndDate);
             schedule.setInterestAmount(interestAmount);
-            schedule.setPrincipalAmount(principalAmount); // Always store full principal
+            schedule.setPrincipalAmount(principalAmount);
             schedule.setRemainingPrincipal(remainingBalance);
             schedule.setCreatedAt(LocalDate.now().atStartOfDay());
-            schedule.setStatus(1); // 1 = Pending payment
+            schedule.setStatus(1);
             schedule.setPaidLate(false);
 
             schedules.add(schedule);

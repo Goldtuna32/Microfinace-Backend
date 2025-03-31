@@ -16,14 +16,11 @@ public interface RepaymentTransactionRepository extends JpaRepository<RepaymentT
     // Find transactions for a specific date
     List<RepaymentTransaction> findByPaymentDate(LocalDate paymentDate);
 
-    // Find transactions related to a specific repayment schedule
-    List<RepaymentTransaction> findByRepaymentScheduleId(Long repaymentScheduleId);
-
-    // Find transactions related to a specific current account
-    List<RepaymentTransaction> findByCurrentAccountId(Long currentAccountId);
-
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.dueDate = :dueDate AND rs.status = 1")
     List<RepaymentSchedule> findDueSchedules(LocalDate dueDate);
     Optional<RepaymentTransaction> findTopByRepaymentScheduleAndLateFeePaidDateIsNotNullOrderByLateFeePaidDateDesc(
             RepaymentSchedule schedule);
+
+    List<RepaymentTransaction> findByRepaymentScheduleId(Long repaymentScheduleId);
+    List<RepaymentTransaction> findByCurrentAccountId(Long currentAccountId);
 }

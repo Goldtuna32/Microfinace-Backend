@@ -115,76 +115,26 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
         return startDate.plusMonths(loanTermMonths);
     }
 
-//    @Override
-//    public HpRegistrationDTO approveHpRegistration(Long registrationId, BigDecimal remainingAmount) throws Exception {
-//        // 1. Find the HP registration
-//        HpRegistration hpRegistration = repository.findById(registrationId)
-//                .orElseThrow(() -> new RuntimeException("HP Registration not found"));
-//
-//        // 2. Check if already approved
-//        if (hpRegistration.getStatus() == 4) {
-//            throw new IllegalStateException("HP Registration already approved");
-//        }
-//
-//        // 3. Validate financial details
-//        if (hpRegistration.getDownPayment() == null || hpRegistration.getLoanAmount() == null) {
-//            throw new IllegalStateException("Financial details not properly configured");
-//        }
-//
-//        // 4. Validate the remaining amount matches expected value
-//        BigDecimal expectedRemaining = hpRegistration.getLoanAmount().subtract(hpRegistration.getDownPayment());
-//        if (remainingAmount.compareTo(expectedRemaining) != 0) {
-//            throw new IllegalArgumentException(
-//                    String.format("Remaining amount doesn't match expected value. Expected: %s, Provided: %s",
-//                            expectedRemaining, remainingAmount)
-//            );
-//        }
-//
-//        // 5. Get customer account and validate balance
-//        CurrentAccount customerAccount = hpRegistration.getCurrentAccount();
-//        if (customerAccount == null) {
-//            throw new IllegalStateException("No current account assigned to HP registration");
-//        }
-//
-//        if (customerAccount.getBalance().compareTo(hpRegistration.getDownPayment()) < 0) {
-//            throw new InsufficientFundsException(
-//                    String.format("Customer has insufficient funds. Required: %s, Available: %s",
-//                            hpRegistration.getDownPayment(), customerAccount.getBalance())
-//            );
-//        }
-//
-//        // 6. Get dealer account
-//        CurrentAccount dealerAccount = currentAccountRepository.findDealerAccountByHpProductId(hpRegistration.getHpProductId())
-//                .orElseThrow(() -> new EntityNotFoundException(
-//                        "Dealer account not found for HP product id: " + hpRegistration.getHpProductId()));
-//
-//
-//        // 7. Process financial transactions
-//        try {
-//            // Transfer down payment from customer to dealer
-//            accountTransactionService.transferFunds(
-//                    customerAccount.getId(),
-//                    dealerAccount.getId(),
-//                    hpRegistration.getDownPayment(),
-//                    "HP Down Payment - " + hpRegistration.getHpNumber()
-//            );
-//
-//            // 8. Update HP registration status
-//            hpRegistration.setStatus(4); // Approved
-//            hpRegistration.setStartDate(LocalDateTime.now());
-////
-////            if (hpRegistration.getLoanTerm() != null) {
-////                hpRegistration.setEndDate(hpRegistration.getStartDate().plusMonths(hpRegistration.getLoanTerm()));
-////            }
-//
-//            HpRegistration approvedHp = repository.save(hpRegistration);
-//
-//            return modelMapper.map(approvedHp, HpRegistrationDTO.class);
-//
-//        } catch (Exception e) {
-//            throw new Exception("Failed to process HP approval: " + e.getMessage(), e);
-//        }
-//    }
+    @Override
+    public HpRegistrationDTO approveHpRegistration(Long registrationId)  {
+        // 1. Find the HP registration
+        HpRegistration hpRegistration = repository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("HP Registration not found"));
+
+        // 2. Check if already approved
+        if (hpRegistration.getStatus() == 4) {
+            throw new IllegalStateException("HP Registration already approved");
+        }
+
+            hpRegistration.setStatus(4); // Approved
+            hpRegistration.setStartDate(LocalDate.now());
+
+            HpRegistration approvedHp = repository.save(hpRegistration);
+            hpScheduleService.generateHpRepaymentSchedule(hpRegistration.getId());
+
+            return modelMapper.map(approvedHp, HpRegistrationDTO.class);
+
+    }
 
     @Override
     public HpRegistrationDTO updateHpRegistration(Long id, HpRegistrationDTO dto) {

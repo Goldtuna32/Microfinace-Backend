@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -118,29 +119,29 @@ public class CollateralTypeServiceImpl implements CollateralTypeService {
 
     @Override
     public List<CollateralTypeDTO> getActiveCollateralTypesByBranch(Long branchId) {
-        return mapCollateralTypesToDTOs(
-                repository.findActiveCollateralTypesByBranchId(branchId)
-        );
+        List<CollateralType> collateralTypes = repository.findActiveCollateralTypesByBranchId(branchId);
+        return convertCollateralTypesToDTOs(collateralTypes);
     }
 
     @Override
     public List<CollateralTypeDTO> getInActiveCollateralTypesByBranch(Long branchId) {
-        return mapCollateralTypesToDTOs(
-                repository.findInActiveCollateralTypesByBranchId(branchId)
-        );
+        List<CollateralType> collateralTypes = repository.findInActiveCollateralTypesByBranchId(branchId);
+        return convertCollateralTypesToDTOs(collateralTypes);
     }
 
-    private List<CollateralTypeDTO> mapCollateralTypesToDTOs(List<CollateralType> types) {
-        return types.stream()
-                .map(this::mapToCollateralTypeDTO)
-                .collect(Collectors.toList());
+    private List<CollateralTypeDTO> convertCollateralTypesToDTOs(List<CollateralType> collateralTypes) {
+        List<CollateralTypeDTO> dtos = new ArrayList<>();
+        for (CollateralType collateralType : collateralTypes) {
+            dtos.add(convertToCollateralTypeDTO(collateralType));
+        }
+        return dtos;
     }
 
-    private CollateralTypeDTO mapToCollateralTypeDTO(CollateralType type) {
-        return new CollateralTypeDTO(
-                type.getId(),
-                type.getName(),
-                type.getStatus()
-        );
+    private CollateralTypeDTO convertToCollateralTypeDTO(CollateralType collateralType) {
+        CollateralTypeDTO dto = new CollateralTypeDTO();
+        dto.setId(collateralType.getId());
+        dto.setName(collateralType.getName());
+        dto.setStatus(collateralType.getStatus());
+        return dto;
     }
 }

@@ -32,5 +32,7 @@ public interface HpRegistrationService {
     List<HpRegistrationDTO> getAllPendingHP(Long branchId);
     List<HpRegistrationDTO> getAllApprovedHP(Long branchId);
 
+    HpRegistrationDTO approveHpRegistration(Long registrationId);
+
 //    HpRegistrationDTO approveHpRegistration(Long registrationId, BigDecimal remainingAmount) throws Exception;
 }

@@ -58,15 +58,13 @@ public class HpRegistrationController {
         return ResponseEntity.ok(hpRegistrationDTOS);
     }
 
-//    @PutMapping("/{id}/approve")
-//    public ResponseEntity<HpRegistrationDTO> approveHpRegistration(
-//            @PathVariable Long id,
-//            @RequestBody Map<String, BigDecimal> request) throws Exception {
-//
-//        BigDecimal bankPortion = request.get("bankPortion");
-//        HpRegistrationDTO approvedHp = service.approveHpRegistration(id, bankPortion);
-//        return ResponseEntity.ok(approvedHp);
-//    }
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<HpRegistrationDTO> approveHpRegistration(
+            @PathVariable Long id) {
+
+        HpRegistrationDTO approvedHp = service.approveHpRegistration(id);
+        return ResponseEntity.ok(approvedHp);
+    }
 
 
     @PreAuthorize("hasAuthority('HP_REGISTER_READ')")

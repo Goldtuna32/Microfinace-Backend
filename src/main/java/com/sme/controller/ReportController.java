@@ -123,4 +123,52 @@ public class ReportController {
 
         return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
     }
+
+    @GetMapping(value = "/hp/detail/{hpId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generateHpDetailPdfReport(@PathVariable Long hpId) throws Exception {
+        byte[] reportBytes = reportService.generateHpDetailReport(hpId, "pdf");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "hp_detail_report_" + hpId + ".pdf");
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/hp/detail/{hpId}/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generateHpDetailExcelReport(@PathVariable Long hpId) throws Exception {
+        byte[] reportBytes = reportService.generateHpDetailReport(hpId, "excel");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "hp_detail_report_" + hpId + ".xlsx");
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/hp/schedule/{hpRegistrationId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generateHpSchedulePdfReport(@PathVariable Long hpRegistrationId) throws Exception {
+        byte[] reportBytes = reportService.generateHpScheduleReport(hpRegistrationId, "pdf");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "hp_schedule_report_" + hpRegistrationId + ".pdf");
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/hp/schedule/{hpRegistrationId}/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> generateHpScheduleExcelReport(@PathVariable Long hpRegistrationId) throws Exception {
+        byte[] reportBytes = reportService.generateHpScheduleReport(hpRegistrationId, "excel");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "hp_schedule_report_" + hpRegistrationId + ".xlsx");
+        headers.setContentLength(reportBytes.length);
+
+        return new ResponseEntity<>(reportBytes, headers, HttpStatus.OK);
+    }
 }

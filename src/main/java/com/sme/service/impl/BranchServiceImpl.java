@@ -88,22 +88,31 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchDTO createBranch(BranchDTO branchDTO, AddressDTO addressDTO) {
-        try {
-            Address address = modelMapper.map(addressDTO, Address.class);
-            addressRepository.save(address);
+        if (branchDTO == null || addressDTO == null) {
+            throw new IllegalArgumentException("BranchDTO and AddressDTO cannot be null");
+        }
 
-            Branch branch = modelMapper.map(branchDTO, Branch.class);
+        try {
+            // 1. Save Address first
+            Address address = modelMapper.map(addressDTO, Address.class);
+            address = addressRepository.save(address);
+
+            // 2. Then save Branch with the new Address
+            Branch branch = new Branch();
+            branch.setName(branchDTO.getBranchName());
+            branch.setPhoneNumber(branchDTO.getPhoneNumber());
+            branch.setEmail(branchDTO.getEmail());
             branch.setAddress(address);
             branch.setStatus(1);
             branch.setCreatedDate(new Date());
             branch.setUpdatedDate(new Date());
-            branch.setBranchCode(generateBranchCode(addressDTO.getRegion()));
+            branch.setBranchCode(generateBranchCode(address.getRegion()));
 
             Branch savedBranch = branchRepository.save(branch);
             return modelMapper.map(savedBranch, BranchDTO.class);
         } catch (Exception e) {
             throw new BranchCreationException(
-                    "Failed to create branch with name: " + branchDTO.getBranchName(), e);
+                    "Failed to create branch: " + e.getMessage(), e);
         }
     }
 

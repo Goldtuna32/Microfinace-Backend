@@ -73,7 +73,7 @@ public class AccountTransactionServiceImpl implements AccountTransactionService 
             AccountTransaction transaction = modelMapper.map(transactionDTO, AccountTransaction.class);
             transaction.setCurrentAccount(account);
             transaction.setTransactionDate(new Date());
-            transaction.setStatus(transactionDTO.getStatus() != null ? transactionDTO.getStatus() : 1); // Default to 1 (e.g., Pending)
+            transaction.setStatus(transactionDTO.getStatus() != null ? transactionDTO.getStatus() : 6); // Default to 1 (e.g., Pending)
 
             return transactionRepository.save(transaction);
         } catch (Exception e) {

@@ -4,34 +4,48 @@ import com.sme.dto.*;
 import com.sme.entity.*;
 import com.sme.exception.*;
 import com.sme.repository.*;
-import com.sme.service.CIFService;
-import com.sme.service.CurrentAccountService;
-import com.sme.service.RepaymentScheduleService;
-import com.sme.service.SmeLoanRegistrationService;
+import com.sme.service.*;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(SmeLoanRegistrationService.class);
 
     private final SmeLoanRegistrationRepository smeLoanRegistrationRepository;
     private final SmeLoanCollateralRepository smeLoanCollateralRepository;
     private final CollateralRepository collateralRepository;
+    private final RepaymentScheduleReportService repaymentScheduleReportService;
+
 
     private final CurrentAccountService currentAccountService;
     private final CIFService cifService;
@@ -47,6 +61,11 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
 
     @Autowired
     private CurrentAccountRepository currentAccountRepository;
+
+    private final JavaMailSender javaMailSender;
+
+    @Value("${spring.mail.username}")
+    private String senderEmail;
 
 
     @Override
@@ -231,29 +250,107 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         SmeLoanRegistration loan = smeLoanRegistrationRepository.findById(id)
                 .orElseThrow(() -> new LoanNotFoundException(id));
 
-        if (loan.getStatus() != 3) {
-            throw new InvalidStatusTransitionException(loan.getStatus(), 4);
+        if (loan.getStatus() != 3) { // Assuming 3 is "Pending Approval"
+            throw new InvalidStatusTransitionException(loan.getStatus(), 4); // 4 is "Approved"
         }
 
         try {
+            // Update loan status
             loan.setStatus(4);
             loan.setRepaymentStartDate(LocalDateTime.now());
             SmeLoanRegistration updatedLoan = smeLoanRegistrationRepository.save(loan);
+
+            // Update current account balance
             CurrentAccount currentAccount = loan.getCurrentAccount();
             if (currentAccount == null) {
                 throw new CurrentAccountNotFoundException("Current account not found for loan ID: " + id);
             }
-            BigDecimal loanAmount = loan.getLoanAmount(); // Assuming loanAmount is available in SmeLoanRegistration
-            BigDecimal currentBalance = currentAccount.getBalance();
-            currentAccount.setBalance(currentBalance.add(loanAmount));
-            // Save the updated current account.
+
+            BigDecimal loanAmount = loan.getLoanAmount();
+            currentAccount.setBalance(currentAccount.getBalance().add(loanAmount));
             currentAccountRepository.save(currentAccount);
+
+            // Generate repayment schedule
             repaymentScheduleService.generateRepaymentSchedule(id);
+
+            // Send approval email with repayment schedule
+            sendLoanApprovalEmail(updatedLoan);
+
             return mapToDTO(updatedLoan);
         } catch (Exception e) {
-            throw new LoanUpdateException(
-                    "Failed to approve loan with id: " + id, e);
+            throw new LoanUpdateException("Failed to approve loan with id: " + id, e);
         }
+    }
+
+    private void sendLoanApprovalEmail(SmeLoanRegistration loan) {
+        try {
+            String customerEmail = getCustomerEmailFromCif(loan);
+            String customerName = getCustomerNameFromCif(loan);
+
+            // Generate repayment schedule report
+            byte[] reportBytes = repaymentScheduleReportService.generateReport(loan.getId(), "pdf");
+
+            // Create email
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(senderEmail);
+            helper.setTo(customerEmail);
+            helper.setSubject("Your Loan Approval and Repayment Schedule");
+            helper.setText(createEmailBody(loan, customerName), true);
+
+            // Attach the repayment schedule report - FIXED PART
+            InputStreamSource attachmentSource = new ByteArrayResource(reportBytes);
+            helper.addAttachment("Repayment_Schedule.pdf", attachmentSource);
+
+            javaMailSender.send(message);
+            logger.info("Loan approval email sent to {} for loan ID: {}", customerEmail, loan.getId());
+
+        } catch (Exception e) {
+            logger.error("Failed to send approval email for loan ID: {}", loan.getId(), e);
+        }
+    }
+
+    private String createEmailBody(SmeLoanRegistration loan, String customerName) {
+        return String.format("""
+        <html>
+            <body>
+                <p>Dear %s,</p>
+                <p>Your loan application <strong>#%s</strong> has been approved.</p>
+                <p><strong>Loan Details:</strong></p>
+                <ul>
+                    <li>Amount: %s</li>
+                    <li>Interest Rate: %s%%</li>
+                    <li>Start Date: %s</li>
+                </ul>
+                <p>Please find attached your repayment schedule.</p>
+                <p>Thank you,<br>Loan Services Team</p>
+            </body>
+        </html>
+        """,
+                customerName,
+                loan.getSerialCode(),
+                loan.getLoanAmount(),
+                loan.getInterestRate(),
+                loan.getRepaymentStartDate().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
+        );
+    }
+
+    private String getCustomerEmailFromCif(SmeLoanRegistration loan) {
+        return Optional.ofNullable(loan)
+                .map(SmeLoanRegistration::getCurrentAccount)
+                .map(CurrentAccount::getCif)
+                .map(CIF::getEmail)
+                .orElseThrow(() -> new RuntimeException(
+                        "Customer email not found for loan ID: " + loan.getId()));
+    }
+
+    private String getCustomerNameFromCif(SmeLoanRegistration loan) {
+        return Optional.ofNullable(loan)
+                .map(SmeLoanRegistration::getCurrentAccount)
+                .map(CurrentAccount::getCif)
+                .map(CIF::getName)
+                .orElse("Customer");
     }
 
     private SmeLoanRegistrationDTO mapToDTO(SmeLoanRegistration loan) {
@@ -340,6 +437,28 @@ public class SmeLoanRegistrationServiceImpl implements SmeLoanRegistrationServic
         dto.setTotalCollateralAmount(totalCollateralAmount);
 
         return dto;
+    }
+
+    private String getCustomerEmail(SmeLoanRegistration loan) {
+        // Get current account from loan
+        CurrentAccount currentAccount = loan.getCurrentAccount();
+        if (currentAccount == null) {
+            throw new RuntimeException("Current account not found for loan ID: " + loan.getId());
+        }
+
+        // Get CIF from current account
+        CIF cif = currentAccount.getCif();
+        if (cif == null) {
+            throw new RuntimeException("CIF not found for current account ID: " + currentAccount.getId());
+        }
+
+        // Get email from CIF
+        String email = cif.getEmail();
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("Email not found in CIF record for CIF ID: " + cif.getId());
+        }
+
+        return email;
     }
 
     private void validateLoanRequest(LoanRegistrationRequest request) {

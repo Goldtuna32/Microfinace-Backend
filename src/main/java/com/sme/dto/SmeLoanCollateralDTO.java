@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -21,5 +22,6 @@ public class SmeLoanCollateralDTO {
     private BigDecimal value;
     @StatusConverter
     private Integer status;
+    private LocalDateTime date; // Add this if relevant
 
 }

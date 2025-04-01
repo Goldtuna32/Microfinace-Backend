@@ -2,22 +2,26 @@
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="Collateral_Subreport" pageWidth="555" pageHeight="842" columnWidth="515" leftMargin="20" rightMargin="20">
+              name="CollateralSubreport" pageWidth="555" pageHeight="842" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+
+    <!-- Fields matching SmeLoanCollateralDTO -->
     <field name="id" class="java.lang.Long"/>
+    <field name="loanId" class="java.lang.Long"/>
+    <field name="collateralId" class="java.lang.Long"/>
+    <field name="collateralAmount" class="java.math.BigDecimal"/>
     <field name="description" class="java.lang.String"/>
+    <field name="collateralCode" class="java.lang.String"/>
+    <field name="value" class="java.math.BigDecimal"/>
     <field name="status" class="java.lang.Integer"/>
-    <field name="date" class="java.util.Date"/>
-    <field name="type" class="java.lang.String"/>
-    <field name="cifId" class="java.lang.Long"/>
 
     <title>
         <band height="30">
             <staticText>
-                <reportElement x="0" y="0" width="515" height="20"/>
-                <textElement>
-                    <font isBold="true"/>
+                <reportElement x="0" y="0" width="555" height="30"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Collaterals]]></text>
+                <text><![CDATA[Loan Collaterals]]></text>
             </staticText>
         </band>
     </title>
@@ -25,34 +29,29 @@
     <columnHeader>
         <band height="20">
             <staticText>
-                <reportElement x="0" y="0" width="50" height="20"/>
-                <textElement textAlignment="Center"/>
+                <reportElement x="0" y="0" width="80" height="20"/>
+                <textElement><font isBold="true"/></textElement>
                 <text><![CDATA[ID]]></text>
             </staticText>
             <staticText>
-                <reportElement x="50" y="0" width="95" height="20"/>
-                <textElement textAlignment="Center"/>
+                <reportElement x="80" y="0" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Collateral Code]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="180" y="0" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Amount]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="280" y="0" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Value]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="380" y="0" width="175" height="20"/>
+                <textElement><font isBold="true"/></textElement>
                 <text><![CDATA[Description]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="145" y="0" width="55" height="20"/>
-                <textElement textAlignment="Center"/>
-                <text><![CDATA[Status]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="200" y="0" width="75" height="20"/>
-                <textElement textAlignment="Center"/>
-                <text><![CDATA[Date]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="275" y="0" width="75" height="20"/>
-                <textElement textAlignment="Center"/>
-                <text><![CDATA[Type]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="350" y="0" width="90" height="20"/>
-                <textElement textAlignment="Center"/>
-                <text><![CDATA[CIF ID]]></text>
             </staticText>
         </band>
     </columnHeader>
@@ -60,34 +59,24 @@
     <detail>
         <band height="20">
             <textField>
-                <reportElement x="0" y="0" width="50" height="20"/>
-                <textElement textAlignment="Center"/>
+                <reportElement x="0" y="0" width="80" height="20"/>
                 <textFieldExpression><![CDATA[$F{id}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="50" y="0" width="95" height="20"/>
-                <textElement textAlignment="Left"/>
+                <reportElement x="80" y="0" width="100" height="20"/>
+                <textFieldExpression><![CDATA[$F{collateralCode}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="180" y="0" width="100" height="20"/>
+                <textFieldExpression><![CDATA[$F{collateralAmount}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="280" y="0" width="100" height="20"/>
+                <textFieldExpression><![CDATA[$F{value}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="380" y="0" width="175" height="20"/>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="145" y="0" width="55" height="20"/>
-                <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="200" y="0" width="75" height="20"/>
-                <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA[$F{date}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="275" y="0" width="75" height="20"/>
-                <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA[$F{type}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="350" y="0" width="90" height="20"/>
-                <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA[$F{cifId}]]></textFieldExpression>
             </textField>
         </band>
     </detail>

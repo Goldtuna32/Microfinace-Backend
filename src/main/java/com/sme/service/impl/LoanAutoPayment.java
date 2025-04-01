@@ -1,13 +1,11 @@
 package com.sme.service.impl;
 
+import com.sme.service.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sme.service.AutoPaymentStrategy;
 import com.sme.entity.*;
 import com.sme.repository.*;
-
-import com.sme.service.HolidayService;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -22,6 +20,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set; // Add this import
 import java.util.HashSet; // Add this import
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,16 +32,25 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
     private final CurrentAccountRepository currentAccountRepository;
     private final AccountTransactionRepository accountTransactionRepository;
 
+    private final EmailService emailService;
+    private final SmsService smsService;
+    private final NotificationService notificationService;
+
+    private final Map<Long, LocalDate> lastNotified = new ConcurrentHashMap<>();
+
     public LoanAutoPayment(HolidayService holidayService,
-            RepaymentScheduleRepository repaymentScheduleRepository,
-            RepaymentTransactionRepository repaymentTransactionRepository,
-            CurrentAccountRepository currentAccountRepository,
-            AccountTransactionRepository accountTransactionRepository) {
+                           RepaymentScheduleRepository repaymentScheduleRepository,
+                           RepaymentTransactionRepository repaymentTransactionRepository,
+                           CurrentAccountRepository currentAccountRepository,
+                           AccountTransactionRepository accountTransactionRepository, EmailService emailService, SmsService smsService, NotificationService notificationService) {
         this.holidayService = holidayService;
         this.repaymentScheduleRepository = repaymentScheduleRepository;
         this.repaymentTransactionRepository = repaymentTransactionRepository;
         this.currentAccountRepository = currentAccountRepository;
         this.accountTransactionRepository = accountTransactionRepository;
+        this.emailService = emailService;
+        this.smsService = smsService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -64,11 +72,81 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         List<RepaymentSchedule> schedulesToProcess = repaymentScheduleRepository.findSchedulesForProcessing(today);
 
         // Process all schedules at once instead of individually
-        
+
         if (!schedulesToProcess.isEmpty()) {
+
+            for (RepaymentSchedule schedule : schedulesToProcess) {
+                if (today.isAfter(schedule.getGraceEndDate())) { // Notify only if past grace period
+                    notifyOverduePayment(schedule);
+                }
+            }
             boolean isOverdue = schedulesToProcess.stream()
                     .anyMatch(schedule -> today.isAfter(schedule.getDueDate()));
             processSchedules(schedulesToProcess, isOverdue);
+        }
+    }
+
+    private void notifyOverduePayment(RepaymentSchedule schedule) {
+        LocalDate today = LocalDate.now();
+        LocalDate lastNotificationDate = lastNotified.get(schedule.getId());
+
+        // Skip if already notified today
+        if (lastNotificationDate != null && lastNotificationDate.equals(today)) {
+            System.out.println("Skipping notification for schedule #" + schedule.getId() +
+                    " - Already notified today.");
+            return;
+        }
+
+        SmeLoanRegistration loan = schedule.getSmeLoan();
+        CurrentAccount currentAccount = loan.getCurrentAccount();
+        CIF cif = currentAccount.getCif();
+
+        String email = cif.getEmail();
+        String rawPhoneNumber = cif.getPhoneNumber(); // e.g., "09458345022"
+        String phoneNumber = "+95" + rawPhoneNumber.replaceFirst("^0", ""); // Becomes "+959458345022"
+        String customerName = cif.getName();
+
+        String subject = "Overdue Payment Notification - Loan #" + loan.getId();
+        String emailBody = String.format(
+                "Dear %s,\n\nYour loan payment (Schedule #%d) is overdue as of %s.\n" +
+                        "Due Date: %s\nAmount: %s\nPlease make the payment at your earliest convenience.\n\n" +
+                        "Regards,\nSME Loan Team",
+                customerName, schedule.getId(), LocalDate.now(), schedule.getDueDate(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A"
+        );
+
+        String smsBody = String.format(
+                "Dear %s, Your loan payment (Schedule #%d) is overdue. " +
+                        "Amount: %s. Due: %s. Please pay ASAP.",
+                customerName, schedule.getId(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+                schedule.getDueDate()
+        );
+
+        String notificationBody = String.format(
+                "Loan #%d payment overdue. Amount: %s. Due: %s",
+                loan.getId(),
+                schedule.getInterestAmount() != null ? schedule.getInterestAmount() : "N/A",
+                schedule.getDueDate()
+        );
+
+        try {
+            System.out.println("Attempting to send email to " + email + " with body: " + emailBody);
+            emailService.sendEmail(email, subject, emailBody);
+            System.out.println("Attempting to send SMS to " + phoneNumber + " with body: " + smsBody);
+            smsService.sendSms(phoneNumber, smsBody);
+            System.out.println("Attempting to save notification for account #" + currentAccount.getId());
+            notificationService.sendSystemNotification(
+                    currentAccount.getId(),
+                    "OVERDUE_PAYMENT",
+                    notificationBody,
+                    loan.getId()
+            );
+            System.out.println("Notifications sent for schedule #" + schedule.getId());
+            lastNotified.put(schedule.getId(), today); // Update last notified date
+        } catch (Exception e) {
+            System.err.println("Failed to send notifications for schedule #" +
+                    schedule.getId() + ": " + e.getMessage());
         }
     }
 
@@ -123,7 +201,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
     }
 
     private void processPaymentsInOrder(List<RepaymentSchedule> schedules, CurrentAccount account,
-            BigDecimal totalAvailable, boolean isOverdue) {
+                                        BigDecimal totalAvailable, boolean isOverdue) {
         BigDecimal remainingBalance = totalAvailable;
         LocalDate today = LocalDate.now();
 
@@ -149,7 +227,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
             // Calculate one common late fee for all late terms
             BigDecimal totalOutstanding = calculateTotalOutstanding(lateSchedules);
             BigDecimal totalLateFee;
-            
+
             // Use different rate based on late days
             if (maxLateDays >= 180) {
                 totalLateFee = calculate180DaysLateFee(lateSchedules.get(0).getSmeLoan(),
@@ -217,7 +295,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         currentAccountRepository.save(account);
     }
 
-    
+
     private void processIndividualSchedule(RepaymentSchedule schedule, CurrentAccount account, boolean isOverdue) {
         System.out.println("\n=== Processing Schedule ID: " + schedule.getId() + " ===");
         System.out.println("Initial account balance: " + account.getBalance());
@@ -272,15 +350,15 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
 
         System.out.println("IS OVERDUE CHECK: " + isOverdue);
 
-                // 1. Late Fee
-                if (isOverdue && requiredLateFee.compareTo(BigDecimal.ZERO) > 0 && balance.compareTo(requiredLateFee) >= 0) {
-                    paidLateFee = requiredLateFee;
-                    balance = balance.subtract(paidLateFee);
-                    // Set last payment date when late fee is paid
-                    schedule.setLastPaymentDate(today);
-                    repaymentScheduleRepository.save(schedule);
-                    System.out.println("Late fee payment: " + paidLateFee);
-                }
+        // 1. Late Fee
+        if (isOverdue && requiredLateFee.compareTo(BigDecimal.ZERO) > 0 && balance.compareTo(requiredLateFee) >= 0) {
+            paidLateFee = requiredLateFee;
+            balance = balance.subtract(paidLateFee);
+            // Set last payment date when late fee is paid
+            schedule.setLastPaymentDate(today);
+            repaymentScheduleRepository.save(schedule);
+            System.out.println("Late fee payment: " + paidLateFee);
+        }
 
         // 2. IOD (Interest Over Due)
         BigDecimal iod = schedule.getInterestOverDue();
@@ -389,7 +467,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         SmeLoanRegistration loan = schedule.getSmeLoan();
         BigDecimal interestOverDue = schedule.getInterestOverDue();
         BigDecimal ratePercentage = loan.getLate_fee_rate();
-        
+
         if (ratePercentage == null) {
             ratePercentage = new BigDecimal("3.00"); // 3% default rate
         }
@@ -408,7 +486,7 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
-    
+
 
     // Add these two helper methods
     private BigDecimal calculateTotalOutstanding(List<RepaymentSchedule> schedules) {
@@ -448,4 +526,4 @@ public class LoanAutoPayment implements AutoPaymentStrategy {
         BigDecimal lateFee = totalOutstanding.multiply(dailyRate).multiply(BigDecimal.valueOf(lateDays));
         return lateFee.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
-}
+}   

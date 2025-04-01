@@ -47,12 +47,13 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPoint)) // Handle Unauthorized
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login","/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/login","/api/auth/refresh", "/api/users/register").permitAll()
                         .requestMatchers("/api/auth/logout").permitAll()
-                        .requestMatchers("/api/branches/**").hasRole("ADMIN")
+                        .requestMatchers("/api/branches/**").permitAll()
                         .requestMatchers("/api/users/current").permitAll()
                         .requestMatchers("/api/roles/").permitAll()
                         .requestMatchers("/api/permissions").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
                         .requestMatchers("/email-websocket").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
                         .requestMatchers("/api/notifications/").permitAll()

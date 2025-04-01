@@ -38,6 +38,9 @@ public class ReportServiceImpl implements ReportService {
     private CurrentAccountService currentAccountService;
 
     @Autowired
+    private HpScheduleService hpScheduleService;
+
+    @Autowired
     private CollateralService collateralService;
 
     @Autowired
@@ -49,6 +52,50 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private SmeLoanRegistrationService loanService;
 
+    @Autowired
+    private HpRegistrationService hpRegistrationService;
+
+    @Autowired
+    private HpProductService hpProductService; // Service to fetch HpProductDTO
+
+    @Override
+    public byte[] generateHpDetailReport(Long hpId, String format) throws Exception {
+        // Get HP registration data
+        HpRegistrationDTO hpRegistration = hpRegistrationService.getHpRegistrationById(hpId);
+
+        // Get associated HP product data
+        HpProductDTO hpProduct = hpProductService.getHpProductById(hpRegistration.getHpProductId());
+        JRBeanCollectionDataSource hpProductDataSource = new JRBeanCollectionDataSource(
+                hpProduct != null ? Collections.singletonList(hpProduct) : Collections.emptyList()
+        );
+
+        // Prepare parameters
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("hpRegistration", hpRegistration);
+        parameters.put("hpProduct", hpProductDataSource);
+
+        // Load and compile the main report
+        InputStream mainReportStream = new ClassPathResource("reports/hp_registration_detail_report.jrxml").getInputStream();
+        JasperReport jasperReport = JasperCompileManager.compileReport(mainReportStream);
+
+        // Load and compile the subreport
+        InputStream subreportStream = new ClassPathResource("reports/hp_product_subreport.jrxml").getInputStream();
+        JasperReport subreport = JasperCompileManager.compileReport(subreportStream);
+        parameters.put("HP_PRODUCT_SUBREPORT", subreport);
+
+        // Fill the report
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, new JREmptyDataSource());
+
+        // Export based on format
+        if ("pdf".equalsIgnoreCase(format)) {
+            return JasperExportManager.exportReportToPdf(jasperPrint);
+        } else if ("excel".equalsIgnoreCase(format)) {
+            return exportToExcel(jasperPrint);
+        } else {
+            throw new IllegalArgumentException("Unsupported report format: " + format);
+        }
+    }
+
     @Override
     public byte[] generateLoanDetailReport(Long loanId, String format) throws Exception {
         // Get loan data
@@ -59,9 +106,14 @@ public class ReportServiceImpl implements ReportService {
         parameters.put("loan", loan);
         parameters.put("collaterals", new JRBeanCollectionDataSource(loan.getCollaterals()));
 
-        // Load the JasperReport template
-        InputStream reportStream = new ClassPathResource("reports/loan_detail.jrxml").getInputStream();
-        JasperReport jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
+        // Load and compile the main report
+        InputStream mainReportStream = new ClassPathResource("reports/loan_detail.jrxml").getInputStream();
+        JasperReport jasperReport = JasperCompileManager.compileReport(mainReportStream);
+
+        // Load and compile the subreport
+        InputStream subreportStream = new ClassPathResource("reports/collateral_subreport.jrxml").getInputStream();
+        JasperReport subreport = JasperCompileManager.compileReport(subreportStream);
+        parameters.put("SUBREPORT", subreport); // Add subreport as a parameter
 
         // Fill the report
         JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, new JREmptyDataSource());
@@ -341,5 +393,38 @@ public class ReportServiceImpl implements ReportService {
         }
 
         return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] generateHpScheduleReport(Long hpRegistrationId, String format) throws Exception {
+        // Get HP schedule data
+        List<HpScheduleDTO> schedules = hpScheduleService.getHpSchedulesByHpRegistrationId(hpRegistrationId);
+        System.out.println("Schedules for hpRegistrationId " + hpRegistrationId + ": " + (schedules != null ? schedules.size() : "null"));
+        if (schedules == null || schedules.isEmpty()) {
+            System.out.println("No schedules found for hpRegistrationId: " + hpRegistrationId);
+        }
+
+        JRBeanCollectionDataSource scheduleDataSource = new JRBeanCollectionDataSource(schedules != null ? schedules : Collections.emptyList());
+
+        // Prepare parameters
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("hpRegistrationId", hpRegistrationId);
+        parameters.put("schedules", scheduleDataSource);
+
+        // Load and compile the report
+        InputStream reportStream = new ClassPathResource("reports/hp_repayment_schedule.jrxml").getInputStream();
+        JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
+
+        // Fill the report
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters);
+
+        // Export based on format
+        if ("pdf".equalsIgnoreCase(format)) {
+            return JasperExportManager.exportReportToPdf(jasperPrint);
+        } else if ("excel".equalsIgnoreCase(format)) {
+            return exportToExcel(jasperPrint);
+        } else {
+            throw new IllegalArgumentException("Unsupported report format: " + format);
+        }
     }
 }

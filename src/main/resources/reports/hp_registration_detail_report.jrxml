@@ -2,28 +2,12 @@
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="LoanDetailReport" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+              name="HpRegistrationDetailReport" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
 
     <!-- Parameters -->
-    <parameter name="loan" class="com.sme.dto.SmeLoanRegistrationDTO"/>
-    <parameter name="collaterals" class="net.sf.jasperreports.engine.data.JRBeanCollectionDataSource"/>
-    <parameter name="SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
-
-    <!-- Fields (not needed since we're using parameters directly, but kept for reference) -->
-    <field name="id" class="java.lang.Long"/>
-    <field name="serialCode" class="java.lang.String"/>
-    <field name="loanAmount" class="java.math.BigDecimal"/>
-    <field name="interestRate" class="java.math.BigDecimal"/>
-    <field name="late_fee_rate" class="java.math.BigDecimal"/>
-    <field name="gracePeriod" class="java.lang.Integer"/>
-    <field name="repaymentDuration" class="java.lang.Long"/>
-    <field name="documentFee" class="java.math.BigDecimal"/>
-    <field name="serviceCharges" class="java.math.BigDecimal"/>
-    <field name="status" class="java.lang.Integer"/>
-    <field name="dueDate" class="java.time.LocalDateTime"/>
-    <field name="repaymentStartDate" class="java.time.LocalDateTime"/>
-    <field name="totalCollateralAmount" class="java.math.BigDecimal"/>
-    <field name="accountNumber" class="java.lang.String"/>
+    <parameter name="hpRegistration" class="com.sme.dto.HpRegistrationDTO"/>
+    <parameter name="hpProduct" class="net.sf.jasperreports.engine.data.JRBeanCollectionDataSource"/>
+    <parameter name="HP_PRODUCT_SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
 
     <!-- Title Band -->
     <title>
@@ -33,7 +17,7 @@
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Loan Detail Report - " + $P{loan}.getSerialCode()]]></textFieldExpression>
+                <textFieldExpression><![CDATA["HP Registration Detail Report - " + $P{hpRegistration}.getHpNumber()]]></textFieldExpression>
             </textField>
             <staticText>
                 <reportElement x="0" y="30" width="555" height="20"/>
@@ -51,95 +35,94 @@
     <!-- Detail Band -->
     <detail>
         <band height="300">
-            <!-- Loan Details -->
             <staticText>
                 <reportElement x="0" y="0" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Loan ID:]]></text>
+                <text><![CDATA[HP ID:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="0" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getId()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getId()]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="20" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Serial Code:]]></text>
+                <text><![CDATA[HP Number:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="20" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getSerialCode()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getHpNumber()]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="40" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Loan Amount:]]></text>
+                <text><![CDATA[Created Date:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="40" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getLoanAmount()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getCreatedDate() != null ? $P{hpRegistration}.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")) : "N/A"]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="60" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Interest Rate:]]></text>
+                <text><![CDATA[Loan Amount:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="60" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getInterestRate() + "%"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getLoanAmount()]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="80" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Late Fee Rate:]]></text>
+                <text><![CDATA[Down Payment:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="80" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getLate_fee_rate() + "%"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getDownPayment()]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="100" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Grace Period:]]></text>
+                <text><![CDATA[Loan Term:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="100" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getGracePeriod() + " days"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getLoanTerm() + " months"]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="120" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Repayment Duration:]]></text>
+                <text><![CDATA[Interest Rate:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="120" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getRepaymentDuration() + " months"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getInterestRate() + "%"]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="140" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Document Fee:]]></text>
+                <text><![CDATA[Start Date:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="140" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getDocumentFee()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getStartDate() != null ? $P{hpRegistration}.getStartDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="160" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Service Charges:]]></text>
+                <text><![CDATA[End Date:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="160" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getServiceCharges()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getEndDate() != null ? $P{hpRegistration}.getEndDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
             </textField>
 
             <staticText>
@@ -149,60 +132,39 @@
             </staticText>
             <textField>
                 <reportElement x="110" y="180" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getStatus()]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getStatus()]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="200" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Due Date:]]></text>
+                <text><![CDATA[Grace Period:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="200" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getDueDate() != null ? $P{loan}.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getGracePeriod() + " days"]]></textFieldExpression>
             </textField>
 
             <staticText>
                 <reportElement x="0" y="220" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Repayment Start:]]></text>
+                <text><![CDATA[Late Fee Rate:]]></text>
             </staticText>
             <textField>
                 <reportElement x="110" y="220" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getRepaymentStartDate() != null ? $P{loan}.getRepaymentStartDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
-            </textField>
-
-            <staticText>
-                <reportElement x="0" y="240" width="100" height="20"/>
-                <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Account Number:]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="110" y="240" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getAccountNumber() != null ? $P{loan}.getAccountNumber() : "N/A"]]></textFieldExpression>
-            </textField>
-
-            <staticText>
-                <reportElement x="0" y="260" width="100" height="20"/>
-                <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Collateral Amount:]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="110" y="260" width="445" height="20"/>
-                <textFieldExpression><![CDATA[$P{loan}.getTotalCollateralAmount() != null ? $P{loan}.getTotalCollateralAmount() : "N/A"]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$P{hpRegistration}.getLate_fee_rate() + "%"]]></textFieldExpression>
             </textField>
         </band>
     </detail>
 
-    <!-- Subreport for Collaterals -->
+    <!-- Subreport for HP Product -->
     <summary>
         <band height="50">
             <subreport>
                 <reportElement x="0" y="0" width="555" height="50"/>
-                <dataSourceExpression><![CDATA[$P{collaterals}]]></dataSourceExpression>
-                <subreportExpression><![CDATA[$P{SUBREPORT}]]></subreportExpression>
+                <dataSourceExpression><![CDATA[$P{hpProduct}]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{HP_PRODUCT_SUBREPORT}]]></subreportExpression>
             </subreport>
         </band>
     </summary>
-
 </jasperReport>

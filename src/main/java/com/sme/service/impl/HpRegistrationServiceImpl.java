@@ -70,21 +70,23 @@ public class HpRegistrationServiceImpl implements HpRegistrationService {
             dto.setStartDate(LocalDate.now());
         }
 
-        // Calculate end date based on loan term
-        if (dto.getLoanTerm() != null && dto.getLoanTerm() > 0) {
-            LocalDate endDate = calculateEndDate(dto.getStartDate(), dto.getLoanTerm());
-            dto.setEndDate(endDate);
-        }
-
         // Map and save the registration
         HpRegistration hpRegistration = modelMapper.map(dto, HpRegistration.class);
         hpRegistration.setOne_hundred_and_eighty_late_fee_rate(dto.getOne_hundred_and_eighty_late_fee_rate());
         hpRegistration.setCreatedDate(LocalDateTime.now());
+        hpRegistration.setStatus(3);
+
+        if (dto.getCurrentAccountId() != null) {
+            CurrentAccount account = currentAccountRepository.findById(dto.getCurrentAccountId())
+                    .orElseThrow(() -> new EntityNotFoundException("CurrentAccount not found with id: " + dto.getCurrentAccountId()));
+            hpRegistration.setCurrentAccount(account);
+        }
+
 
         HpRegistration savedHpRegistration = repository.save(hpRegistration);
 
         // Generate schedule after saving (so we have an ID)
-        hpScheduleService.generateHpRepaymentSchedule(savedHpRegistration.getId());
+//        hpScheduleService.generateHpRepaymentSchedule(savedHpRegistration.getId());
 
         return modelMapper.map(savedHpRegistration, HpRegistrationDTO.class);
     }

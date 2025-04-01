@@ -1,100 +1,208 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
-              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="loan_detail" pageWidth="595" pageHeight="842"
-              columnWidth="555" leftMargin="20" rightMargin="20"
-              topMargin="20" bottomMargin="20" uuid="a8b0a1a1-1a1a-4a1a-9a1a-1a1a1a1a1a1a">
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="LoanDetailReport" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
 
-    <property name="ireport.zoom" value="1.0"/>
-    <property name="ireport.x" value="0"/>
-    <property name="ireport.y" value="0"/>
-
+    <!-- Parameters -->
     <parameter name="loan" class="com.sme.dto.SmeLoanRegistrationDTO"/>
     <parameter name="collaterals" class="net.sf.jasperreports.engine.data.JRBeanCollectionDataSource"/>
+    <parameter name="SUBREPORT" class="net.sf.jasperreports.engine.JasperReport"/>
 
-    <queryString>
-        <![CDATA[]]>
-    </queryString>
+    <!-- Fields (not needed since we're using parameters directly, but kept for reference) -->
+    <field name="id" class="java.lang.Long"/>
+    <field name="serialCode" class="java.lang.String"/>
+    <field name="loanAmount" class="java.math.BigDecimal"/>
+    <field name="interestRate" class="java.math.BigDecimal"/>
+    <field name="late_fee_rate" class="java.math.BigDecimal"/>
+    <field name="gracePeriod" class="java.lang.Integer"/>
+    <field name="repaymentDuration" class="java.lang.Long"/>
+    <field name="documentFee" class="java.math.BigDecimal"/>
+    <field name="serviceCharges" class="java.math.BigDecimal"/>
+    <field name="status" class="java.lang.Integer"/>
+    <field name="dueDate" class="java.time.LocalDateTime"/>
+    <field name="repaymentStartDate" class="java.time.LocalDateTime"/>
+    <field name="totalCollateralAmount" class="java.math.BigDecimal"/>
+    <field name="accountNumber" class="java.lang.String"/>
 
-    <field name="collateralId" class="java.lang.Long"/>
-    <field name="collateralAmount" class="java.math.BigDecimal"/>
-    <field name="description" class="java.lang.String"/>
-
+    <!-- Title Band -->
     <title>
-        <band height="79" splitType="Stretch">
-            <staticText>
-                <reportElement x="0" y="0" width="555" height="30" uuid="b1b1b1b1-1b1b-4b1b-9b1b-1b1b1b1b1b1b"/>
+        <band height="50">
+            <textField>
+                <reportElement x="0" y="0" width="555" height="30"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="18" isBold="true"/>
+                    <font size="14" isBold="true"/>
                 </textElement>
-                <text><![CDATA[LOAN DETAIL REPORT]]></text>
+                <textFieldExpression><![CDATA["Loan Detail Report - " + $P{loan}.getSerialCode()]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="0" y="30" width="555" height="20"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Generated on: ]]></text>
             </staticText>
             <textField>
-                <reportElement x="0" y="30" width="555" height="20" uuid="c1c1c1c1-1c1c-4c1c-9c1c-1c1c1c1c1c1c"/>
-                <textElement textAlignment="Center">
-                    <font isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Loan #" + $P{loan}.getSerialCode()]]></textFieldExpression>
+                <reportElement x="100" y="30" width="455" height="20"/>
+                <textElement textAlignment="Left"/>
+                <textFieldExpression><![CDATA[new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new java.util.Date())]]></textFieldExpression>
             </textField>
-            <line>
-                <reportElement x="0" y="58" width="555" height="1" uuid="d1d1d1d1-1d1d-4d1d-9d1d-1d1d1d1d1d1d"/>
-            </line>
         </band>
     </title>
 
-    <pageHeader>
-        <band height="35" splitType="Stretch">
-            <textField pattern="EEEE, MMMM d, yyyy">
-                <reportElement x="0" y="0" width="555" height="20" uuid="e1e1e1e1-1e1e-4e1e-9e1e-1e1e1e1e1e1e"/>
-                <textElement textAlignment="Right"/>
-                <textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
-            </textField>
-        </band>
-    </pageHeader>
-
-    <columnHeader>
-        <band height="20" splitType="Stretch">
-            <staticText>
-                <reportElement x="0" y="0" width="100" height="20" uuid="f1f1f1f1-1f1f-4f1f-9f1f-1f1f1f1f1f1f"/>
-                <textElement>
-                    <font isBold="true"/>
-                </textElement>
-                <text><![CDATA[Field]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="100" y="0" width="455" height="20" uuid="g1g1g1g1-1g1g-4g1g-9g1g-1g1g1g1g1g1g"/>
-                <textElement>
-                    <font isBold="true"/>
-                </textElement>
-                <text><![CDATA[Value]]></text>
-            </staticText>
-        </band>
-    </columnHeader>
-
+    <!-- Detail Band -->
     <detail>
-        <band height="20" splitType="Stretch">
+        <band height="300">
+            <!-- Loan Details -->
+            <staticText>
+                <reportElement x="0" y="0" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Loan ID:]]></text>
+            </staticText>
             <textField>
-                <reportElement x="0" y="0" width="100" height="20" uuid="h1h1h1h1-1h1h-4h1h-9h1h-1h1h1h1h1h1h"/>
-                <textFieldExpression><![CDATA[$F{fieldName}]]></textFieldExpression>
+                <reportElement x="110" y="0" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getId()]]></textFieldExpression>
             </textField>
+
+            <staticText>
+                <reportElement x="0" y="20" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Serial Code:]]></text>
+            </staticText>
             <textField>
-                <reportElement x="100" y="0" width="455" height="20" uuid="i1i1i1i1-1i1i-4i1i-9i1i-1i1i1i1i1i1i"/>
-                <textFieldExpression><![CDATA[$F{fieldValue}]]></textFieldExpression>
+                <reportElement x="110" y="20" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getSerialCode()]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="40" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Loan Amount:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="40" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getLoanAmount()]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="60" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Interest Rate:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="60" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getInterestRate() + "%"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="80" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Late Fee Rate:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="80" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getLate_fee_rate() + "%"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="100" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Grace Period:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="100" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getGracePeriod() + " days"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="120" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Repayment Duration:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="120" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getRepaymentDuration() + " months"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="140" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Document Fee:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="140" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getDocumentFee()]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="160" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Service Charges:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="160" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getServiceCharges()]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="180" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Status:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="180" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getStatus()]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="200" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Due Date:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="200" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getDueDate() != null ? $P{loan}.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="220" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Repayment Start:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="220" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getRepaymentStartDate() != null ? $P{loan}.getRepaymentStartDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="240" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Account Number:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="240" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getAccountNumber() != null ? $P{loan}.getAccountNumber() : "N/A"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="260" width="100" height="20"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Collateral Amount:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="110" y="260" width="445" height="20"/>
+                <textFieldExpression><![CDATA[$P{loan}.getTotalCollateralAmount() != null ? $P{loan}.getTotalCollateralAmount() : "N/A"]]></textFieldExpression>
             </textField>
         </band>
     </detail>
 
+    <!-- Subreport for Collaterals -->
     <summary>
-        <band height="50" splitType="Stretch">
-            <staticText>
-                <reportElement x="0" y="0" width="555" height="20" uuid="j1j1j1j1-1j1j-4j1j-9j1j-1j1j1j1j1j1j"/>
-                <textElement textAlignment="Center">
-                    <font isBold="true"/>
-                </textElement>
-                <text><![CDATA[End of Report]]></text>
-            </staticText>
+        <band height="50">
+            <subreport>
+                <reportElement x="0" y="0" width="555" height="50"/>
+                <dataSourceExpression><![CDATA[$P{collaterals}]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT}]]></subreportExpression>
+            </subreport>
         </band>
     </summary>
+
 </jasperReport>

@@ -2,17 +2,17 @@
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="CollateralSubreport" pageWidth="555" pageHeight="842" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
+              name="HpProductSubreport" pageWidth="555" pageHeight="842" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0">
 
-    <!-- Fields matching SmeLoanCollateralDTO -->
+    <!-- Fields matching HpProductDTO -->
     <field name="id" class="java.lang.Long"/>
-    <field name="loanId" class="java.lang.Long"/>
-    <field name="collateralId" class="java.lang.Long"/>
-    <field name="collateralAmount" class="java.math.BigDecimal"/>
-    <field name="description" class="java.lang.String"/>
-    <field name="collateralCode" class="java.lang.String"/>
-    <field name="value" class="java.math.BigDecimal"/>
+    <field name="name" class="java.lang.String"/>
     <field name="status" class="java.lang.Integer"/>
+    <field name="price" class="java.math.BigDecimal"/>
+    <field name="productTypeId" class="java.lang.Long"/>
+    <field name="dealerRegistrationId" class="java.lang.Long"/>
+    <field name="commissionFee" class="java.math.BigDecimal"/>
+    <field name="hpProductPhoto" class="java.lang.String"/>
 
     <title>
         <band height="30">
@@ -21,7 +21,7 @@
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Loan Collaterals]]></text>
+                <text><![CDATA[HP Product Details]]></text>
             </staticText>
         </band>
     </title>
@@ -36,48 +36,48 @@
             <staticText>
                 <reportElement x="80" y="0" width="100" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Collateral Code]]></text>
+                <text><![CDATA[Name]]></text>
             </staticText>
             <staticText>
-                <reportElement x="180" y="0" width="100" height="20"/>
+                <reportElement x="180" y="0" width="80" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Amount]]></text>
+                <text><![CDATA[Price]]></text>
             </staticText>
             <staticText>
-                <reportElement x="280" y="0" width="100" height="20"/>
+                <reportElement x="260" y="0" width="80" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Value]]></text>
+                <text><![CDATA[Commission]]></text>
             </staticText>
             <staticText>
-                <reportElement x="380" y="0" width="175" height="20"/>
+                <reportElement x="340" y="0" width="215" height="20"/>
                 <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Description]]></text>
+                <text><![CDATA[Photo]]></text>
             </staticText>
         </band>
     </columnHeader>
 
     <detail>
-        <band height="20">
+        <band height="50"> <!-- Increased height to accommodate image -->
             <textField>
                 <reportElement x="0" y="0" width="80" height="20"/>
                 <textFieldExpression><![CDATA[$F{id}]]></textFieldExpression>
             </textField>
             <textField>
                 <reportElement x="80" y="0" width="100" height="20"/>
-                <textFieldExpression><![CDATA[$F{collateralCode}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{name}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="180" y="0" width="100" height="20"/>
-                <textFieldExpression><![CDATA[$F{collateralAmount}]]></textFieldExpression>
+                <reportElement x="180" y="0" width="80" height="20"/>
+                <textFieldExpression><![CDATA[$F{price}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="280" y="0" width="100" height="20"/>
-                <textFieldExpression><![CDATA[$F{value}]]></textFieldExpression>
+                <reportElement x="260" y="0" width="80" height="20"/>
+                <textFieldExpression><![CDATA[$F{commissionFee}]]></textFieldExpression>
             </textField>
-            <textField>
-                <reportElement x="380" y="0" width="175" height="20"/>
-                <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
-            </textField>
+            <image>
+                <reportElement x="340" y="0" width="50" height="50"/>
+                <imageExpression><![CDATA[$F{hpProductPhoto}]]></imageExpression>
+            </image>
         </band>
     </detail>
 </jasperReport>

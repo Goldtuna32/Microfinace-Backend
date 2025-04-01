@@ -22,7 +22,7 @@ public interface ProductTypeRepository extends JpaRepository<ProductType, Long> 
     List<ProductType> findAllActive();
 
     @Modifying
-    @Query("UPDATE ProductType p SET p.status = 0 WHERE p.id = :id")
+    @Query("UPDATE ProductType p SET p.status = 2 WHERE p.id = :id")
     void softDelete(@Param("id") Long id);
 
     boolean existsByName(String name);
